@@ -1,5 +1,6 @@
 # Android Class for Beginner
 > Udacity.com
+
 > Support by Google
 
 ## Platform
@@ -10,12 +11,20 @@ Android Studio
 
 这是程序的外观展示， 书写在xml文件中，android studio提供动态可视化的工具，是全自动的。
 
+### padding and margin
+
+padding 是添加在子控件内部的，空来拓宽它的大小；margin必须是用在控件组(view group)里面，空来控制字面子控件其他控件的距离。
+```
+android:padding="8dp"
+android:layout_margin="8dp"
+```
+
 ### LinearLayout
 
 这个layout组件是线性排布各个原件的，实例：
 ```
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout   xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
     android:id="@+id/activity_main"
@@ -59,16 +68,21 @@ Android Studio
 
 ### RelativeLayout
 
-这个通过相对关系来布置控件。
+控件默认是在左上角，通过相对关系来布置控件。
 
 通过在子控件中添加这些属性来设置位置：
 ```
 android:layout_alignParentLeft/Right/Top/Bottom="true"
 ```
-这些位置属性默认是false
+这些位置属性默认是false。除此之外还有很多相对属性可以设置。
 
 #### id
 ```
 android:id="@+id/xxx"
 ```
 上面的属性给一个控件定义id名， “@”是调用android内部的资源“+id”即是添加id，因为是第一次定义id所以需要用“+”，之后调用是不需要“+”号的。“xxx”是给予控件的id名。
+使用的时候：
+```
+android:layout_toleftof="@id/xxx"
+```
+这是不需要“+”号，因为id已经定义了。
