@@ -13,4 +13,7 @@ __MCMC is simply an algorithm for sampling from a distribution.__ It’s only on
 ## Why it works
 原理是马氏链的收敛定律。
 
+使用方法是接受-拒绝采样法。
+
 ## How it works
+通过马氏链的细致平稳条件，通过随机的初始状态进行转移，直至稳定。这里的状态是指某种指定的随机分布的状态（比如高斯分布）， 然后头改过稳定下来的随机分布作为盖在待生成分布上方的一个分布，通过不断的接受-拒绝稳定分布中采样的样本，来产生待采样分布中的样本。
