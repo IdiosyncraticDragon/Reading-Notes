@@ -11,3 +11,7 @@ uinit32_t swap_endian(uinit32_t val){
 }
 ```
 一个字节可以表示0x0~0xFF的值，上面的代码，以字节为单位，先在一字节位单位进行换位，接着以两字节为单位进行换位。分治法的思想。
+
+## Data prefetch
+
+data prefetch是以c++代码的形式在caffe-master/src/caffe/layers/data_layer.cpp中的。无法在python代码中对prefetch进行改动。
