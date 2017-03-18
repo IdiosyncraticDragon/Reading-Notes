@@ -11,6 +11,7 @@
 ### concepts
 - Heuristic function f(n) aims at estimating the cost of the cheapest path from node n to a goal node
 - Heuristic functions are the most common form in which additional knowledge of the problem is imparted to the search algorithm;
+- admissible heuristic -- that is, provided that h(n) never overestimates the cost to reach the goal. Admissible heuristics are by nature optimistic, because they think the cost of solving the problem is less than it actually is.
 
 ### useful expressions
 
