@@ -14,8 +14,8 @@
 - Heuristic functions are the most common form in which additional knowledge of the problem is imparted to the search algorithm;
 - A heuristic function h(x) takes a node as input, but it depends only on the state at that node.
 - admissible heuristic -- that is, provided that h(n) never overestimates the cost to reach the goal. Admissible heuristics are by nature optimistic, because they think the cost of solving the problem is less than it actually is.
-- $A^*$ search: it evaluates nodes by combining g(n), the cost to reach the node, and h(n) [maybe the heuristic], the cost to get from the node to the goal: $f(n) = g(n) + h(n)$
-- $A^*$ is optimal if $h(n)$ is an admissible heuristic.
+- $A^* $ search: it evaluates nodes by combining g(n), the cost to reach the node, and h(n) [maybe the heuristic], the cost to get from the node to the goal: $f(n) = g(n) + h(n)$
+- $A^* $ is optimal if $h(n)$ is an admissible heuristic.
 - Admissible heuristic: $h(n)$ never overestimates the cost to reach the goal;
 
 ### useful expressions
