@@ -474,6 +474,36 @@ Lua 采用了自动内存管理。 这意味着你不用操心新创建的对象
 Lua 运行了一个垃圾收集器来收集所有死对象 （即在 Lua 中不可能再访问到的对象）来完成自动内存管理的工作。 Lua 中所有用到的内存，如：字符串、表、用户数据、函数、线程、 内部结构等，都服从自动管理。
 <strong>垃圾收集器间歇率</strong>和<strong>垃圾收集器步进倍率</strong>是其中两个重要的概念。
 
+## seq2seq-attn项目
+
+### Remark
+折腾了两三天，总算明白怎么用这个代码复现论文实验了。需要复现的论文有两篇：
+1. Luong, M.T., Pham, H, D. Manning, C. Effective Approaches to Attention-based Neural Machine Translation. EMNLP,2015
+2. See, A, Luong, M.T., D.Manning, C. Compression of Neural Machine Translation Models via Pruning. CoNLL, 2016.
+
+### 论文1结果复现
+首先将项目下载：https://github.com/harvardnlp/seq2seq-attn，并让其可运行，这个简单，直接安装好torch就行了。接着在项目页的最下端下载pre-trained模型。接着最重要的是：数据。
+特别注意，直接从openNMT里下载wmt15数据里的newstest2013的数据，并不适合本项目，无法用这个复现出论文1和2中提到的seq2seq-attn网络的效果。要直接用项目里data下面的src-test.txt（英语）和targ-test.txt数据！！
+然后，translation脚本：
+```
+--en to de
+th evaluate.lua -model /home/deepModels/torch_models/seq2seq-attn/en-to-de-model.t7 -src_dict /home/deepModels/torch_models/seq2seq-attn/en.dict -targ_dict /home/deepModels/torch_models/seq2seq-attn/de.dict -src_file data/src-test.txt -targ_file data/targ-test.txt -output_file pred.txt -gpuid 1
+--  BLEU score
+perl multi-bleu.perl data/targ-test.txt < pred.txt
+--de to en
+th evaluate.lua -model /home/deepModels/torch_models/seq2seq-attn/de-to-en-model.t7 -src_dict /home/deepModels/torch_models/seq2seq-attn/de.dict -targ_dict /home/deepModels/torch_models/seq2seq-attn/en.dict -src_file data/targ-test.txt -targ_file data/src-test.txt -output_file pred.txt -gpuid 1
+--  BLEU score
+perl multi-bleu.perl data/src-test.txt < pred.txt
+```
+这里特别注意，multi-bleu.perl脚本要从moses项目（https://github.com/moses-smt/mosesdecoder）下载，脚本位置在scripts/generic下面。
+最后可以跑出来，pretrained model中en-to-de的BLEU scroe=19.5；de-to-en的BLEU scroe=20.74。根据项目的issues页面的问题，pretrained models对应于论文1中，表格1和表格3中的“Base + reverse + dropout + global attention (location) + feed input”模型。但是，Ppl.的值依然对应不上。
+
+### 论文2结果复现
+
+#### luajit: not enough memory
+这个问题是luajit的运行内存限制是2GB，而torch默认都是根据luajit安装的，如果要解决这个问题，就需要用原生的lua来重装torch。这个项目可以很好的解决问题：https://github.com/torch/distro。
+安装好后，切换适应于不同lua的torch很容易，只要在~/.bashrc(bash用户)或是~/.zshrc(zsh用户)中将不用的torch版本注释掉就行了。一般刚安装好时，文件最下面那一行就是指定torch版本的语句。
+
 ## OpenNMT
 
 ### 安装环境
