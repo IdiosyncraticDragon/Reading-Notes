@@ -504,6 +504,11 @@ perl multi-bleu.perl data/src-test.txt < pred.txt
 这个问题是luajit的运行内存限制是2GB，而torch默认都是根据luajit安装的，如果要解决这个问题，就需要用原生的lua来重装torch。这个项目可以很好的解决问题：https://github.com/torch/distro。
 安装好后，切换适应于不同lua的torch很容易，只要在~/.bashrc(bash用户)或是~/.zshrc(zsh用户)中将不用的torch版本注释掉就行了。一般刚安装好时，文件最下面那一行就是指定torch版本的语句。
 
+在切换完lua后，还要安装bit module不然有些程序没法正常运行；因为luajit的bit模块是自带的，但是原生lua并不是。
+```
+luarocks install luabitop
+```
+
 ## OpenNMT
 
 ### 安装环境
