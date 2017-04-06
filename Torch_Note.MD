@@ -490,11 +490,11 @@ Lua 运行了一个垃圾收集器来收集所有死对象 （即在 Lua 中不�
 th evaluate.lua -model /home/deepModels/torch_models/seq2seq-attn/en-to-de-model.t7 -src_dict /home/deepModels/torch_models/seq2seq-attn/en.dict -targ_dict /home/deepModels/torch_models/seq2seq-attn/de.dict -src_file data/src-test.txt -targ_file data/targ-test.txt -output_file pred.txt -gpuid 1
 --  BLEU score
 perl multi-bleu.perl data/targ-test.txt < pred.txt
---de to en
 th evaluate.lua -model /home/deepModels/torch_models/seq2seq-attn/de-to-en-model.t7 -src_dict /home/deepModels/torch_models/seq2seq-attn/de.dict -targ_dict /home/deepModels/torch_models/seq2seq-attn/en.dict -src_file data/targ-test.txt -targ_file data/src-test.txt -output_file pred.txt -gpuid 1
+--de to en
 --  BLEU score
-perl multi-bleu.perl data/src-test.txt < pred.txt
 ```
+perl multi-bleu.perl data/src-test.txt < pred.txt
 这里特别注意，multi-bleu.perl脚本要从moses项目（https://github.com/moses-smt/mosesdecoder）下载，脚本位置在scripts/generic下面。
 最后可以跑出来，pretrained model中en-to-de的BLEU scroe=19.5；de-to-en的BLEU scroe=20.74。根据项目的issues页面的问题，pretrained models对应于论文1中，表格1和表格3中的“Base + reverse + dropout + global attention (location) + feed input”模型。但是，Ppl.的值依然对应不上。
 
