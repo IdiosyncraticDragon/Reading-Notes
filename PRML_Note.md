@@ -2,7 +2,7 @@
 > Author:Christopher M. Bishop
 > Year: 2006
 
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default">p</script>
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default">$$p$$</script>
 
 ## Chapter 2 Probability distributions
 
