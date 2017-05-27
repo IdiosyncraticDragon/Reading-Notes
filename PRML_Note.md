@@ -2,7 +2,6 @@
 > Author:Christopher M. Bishop
 > Year: 2006
 
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default">$$p$$</script>
 
 ## Chapter 2 Probability distributions
 
@@ -20,7 +19,7 @@ __正交矩阵（orthonormal matrix）__: n阶方阵A为正交矩阵的充要条
 
 __正交单位向量组__: 见书籍80页 2.46,2.47式．
 
-__antisymmetric matrix__:又称反对称矩阵或是斜对称矩阵，其转置矩阵和自身的加法逆元相等．既：A^T = −A
+__antisymmetric matrix__:又称反对称矩阵或是斜对称矩阵，其转置矩阵和自身的加法逆元相等．既：AT = −A
 
 ### Gaussian distribution
 
