@@ -15,3 +15,31 @@ uinit32_t swap_endian(uinit32_t val){
 ## Data prefetch
 
 data prefetch是以c++代码的形式在caffe-master/src/caffe/layers/data_layer.cpp中的。无法在python代码中对prefetch进行改动。
+
+## GPU 和 CPU 数据
+> http://blog.csdn.net/u012767526/article/details/51459921
+```
+// Assuming that data are on the CPU initially, and we have a blob.
+const Dtype* foo;
+Dtype* bar;
+foo = blob.gpu_data(); // data copied cpu->gpu.
+foo = blob.cpu_data(); // no data copied since both have up-to-date contents.
+bar = blob.mutable_gpu_data(); // no data copied.
+// ... some operations ...
+bar = blob.mutable_gpu_data(); // no data copied when we are still on GPU.
+foo = blob.cpu_data(); // data copied gpu->cpu, since the gpu side has modified the data
+foo = blob.gpu_data(); // no data copied since both have up-to-date contents
+bar = blob.mutable_cpu_data(); // still no data copied.
+bar = blob.mutable_gpu_data(); // data copied cpu->gpu.
+bar = blob.mutable_cpu_data(); // data copied gpu->cpu.
+```
+
+## 代码结构
+
+1. 类的声明存储在 caffe/include/caffe下面
+
+## python 借口
+
+可以直接用的接口在python/caffe/pycaffe.py中能找到
+
+- 指定范围的前向传递：net.forward(start='conv1',end='pool1')．当start为数据层的名字时，会自动做数据prefetch．
