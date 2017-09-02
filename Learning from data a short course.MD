@@ -5,3 +5,4 @@
 
 ### Notes
 - Learning  on data is used in situations where we don't have an analytic solution, but we do have data that we can use to construct an empirical solu­tion
+- The hypothesis set and learning algorithm are referred to informally as the learning model.

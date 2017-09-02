@@ -11,4 +11,26 @@
 - = Use Command-Line mode to evaluate a Vim script expression
 - in MacVim you can interact with the system clipboard using Cmd-X and Cmd-V, save a document with Cmd-S, or close a window with Cmd-W
 
-## Chapter 1 
+## Chapter 1
+
+###  Normal models
+#### dot command
+The dot command lets us repeat the last change. It is the most powerful and versatile command in Vim. a change is created each time we dip into Insert mode (From the moment we enter Insert mode (by pressing i, for example) until we return to Normal mode (by pressing <Esc>),)
+
+#### u command
+undo the changes
+
+#### >G command
+increases the indentation from the current line until the end of the file.
+
+#### a/A
+While the a command appends after the current cursor position, the A command appends at the end of the current line.
+
+#### s
+The s command compounds two steps into one: it deletes the character under the cursor and then enters Insert mode.
+
+#### f
+The f{char} command tells Vim to look ahead for the next occurrence of the specified character and then move the cursor directly to it if a match is found
+
+#### ;
+he ; command will repeat the last search that the f command performed.
