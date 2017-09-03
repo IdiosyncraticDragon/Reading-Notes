@@ -6,3 +6,6 @@
 ### Notes
 - Learning  on data is used in situations where we don't have an analytic solution, but we do have data that we can use to construct an empirical solu­tion
 - The hypothesis set and learning algorithm are referred to informally as the learning model.
+- How could a limited data reveal enough information to pin down the entire target function?
+- Dose the training data set tell us anything outside of it? If the answer is yes, then we have learned something, otherwise, we can conclude the learning is not feasible.
+- For training data set D, generally, if there is something certain about target function outside D, no!if there is something likely about target function outside D, yes!

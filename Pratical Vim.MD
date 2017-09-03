@@ -32,5 +32,12 @@ The s command compounds two steps into one: it deletes the character under the c
 #### f
 The f{char} command tells Vim to look ahead for the next occurrence of the specified character and then move the cursor directly to it if a match is found
 
-#### ;
-he ; command will repeat the last search that the f command performed.
+#### ;/,
+the ; command will repeat the last search that the f command performed.
+, command which repeats the last f{char} search in the reverse direction.
+
+#### *
+place our cursor on the word and hit the * key, equally to search the word at the cursor.
+
+#### cw
+the cw command deletes to the end of the word and then drops us into Insert mode
