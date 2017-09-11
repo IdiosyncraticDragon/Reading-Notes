@@ -41,3 +41,10 @@ place our cursor on the word and hit the * key, equally to search the word at th
 
 #### cw
 the cw command deletes to the end of the word and then drops us into Insert mode
+
+## Chapter 2
+
+###  Normal models
+
+#### daw
+The daw command is easily remembered by the mnemonic delete a word
