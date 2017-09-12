@@ -1,6 +1,10 @@
 # Practical Vim
 > Drew Neil
 
+## Sentences
+
+To recap, our options are as follows.
+
 ## Preliminary
 - The <C-p> notation is equivalent to Ctrl-p
 - <CR> press ESC
@@ -48,3 +52,23 @@ the cw command deletes to the end of the word and then drops us into Insert mode
 
 #### daw
 The daw command is easily remembered by the mnemonic delete a word
+
+#### ctrl-a/ctrl-x
+The <C-a> and <C-x> commands perform addition and subtraction on numbers. running 10<C-a> would modify it to read 15. So if the cursor is not already positioned
+on a number, then the <C-a> command will look ahead for a digit on the current
+line.
+
+#### d{motion}/c{motion}/y{motion}
+dl delete a character, dap delete a paragraph. Operator:
+c Change
+d Delete
+y Yank into register
+g~ Swap case
+gu Make lowercase
+gU Make uppercase
+\> Shift right
+< Shift left
+= Autoindent
+! Filter {motion} lines through an external program
+
+#### 
