@@ -71,4 +71,28 @@ gU Make uppercase
 = Autoindent
 ! Filter {motion} lines through an external program
 
-#### 
+## Chapter 3
+
+### Insert mode
+
+#### ctrl-h/ctrl-w/ctrl-u
+<C-h> Delete back one character (backspace)
+<C-w> Delete back one word
+<C-u> Delete back to start of line
+
+#### ctrl-o/<ESC>/ctrl-[
+<Esc> Switch to Normal mode
+<C-[> Switch to Normal mode
+<C-o> Switch to Insert Normal mode
+
+#### Insert Normal mode
+We can fire off a single command, after which we’ll be returned to
+Insert mode immediately. From Insert mode, we can switch to Insert Normal
+mode by pressing <C-o>
+
+### Normal mode
+
+#### zz
+The zz command redraws
+the screen with the current line in the middle of the window, which allows
+us to read half a screen above and below the line we’re working on.
