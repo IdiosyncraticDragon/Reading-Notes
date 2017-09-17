@@ -15,3 +15,4 @@
 Two much math, need reading book for notes
 
 ## Chapter 3： The Linear Model
+SGD: That is 'on average' the minimization proceeds in the right direction, but is a bit wiggly.(The expectation is the same as GD).

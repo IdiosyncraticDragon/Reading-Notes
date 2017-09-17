@@ -90,9 +90,38 @@ We can fire off a single command, after which we’ll be returned to
 Insert mode immediately. From Insert mode, we can switch to Insert Normal
 mode by pressing <C-o>
 
+#### ctrl-r+0/ctrl-r+{register}
+In Insert mode, we can press <C-r>0 to paste the text that we just yanked at the current cursor position. The general format of the command is <C-r>{register}, where {register} is the
+address of the register we want to insert
+
+#### ctrl-r+=
+ <C-r>=. This opens a prompt at the bottom of the screen where we can type the expression that we want to evaluate. When done, we hit Enter, and Vim inserts the result at our current position in the document.
+
+#### ctrl-v+{code}
+We can tell Vim to insert any arbitrary character if we know its numeric code. From Insert mode, we just have to type <C-v>{code}, where {code} is the address of the character that we want to insert.
+
+####   <C-k>{char1}{char2}
+We can also insert unusual characters as digraphs: pairs of characters that are easy to remember. We can view a list of the available digraphs by running :h digraph-table
+
+### Replace mode
+Replace mode is identical to Insert mode, except that it overwrites existing text in the document.
+From Normal mode, we can engage Replace mode with the R command
+
+#### gR
+Virtual Replace mode is triggered with gR and treats the tab character as though it consisted of spaces. Suppose that we position the cursor on a tab stop spanning eight columns of screen real estate. If we switch to Virtual Replace mode, we could type up to seven characters, each of which would be inserted in front of the tab character. Finally, if we typed an eighth character, it would replace the tab stop.
+
+#### r/gr
+The r{char} and gr{char} commands allow us to overwrite a single character before switching straight back to Normal mode
+
 ### Normal mode
 
 #### zz
 The zz command redraws
 the screen with the current line in the middle of the window, which allows
 us to read half a screen above and below the line we’re working on.
+
+#### y
+yank the text
+
+#### ga (see ctrl-v in insert mode)
+If you want to find out the numeric code for any character in your document, just place the cursor on it and trigger the ga command. This outputs a mes- sage at the bottom of the screen, revealing the character code in decimal and hexadecimal notations.
