@@ -16,3 +16,10 @@ Two much math, need reading book for notes
 
 ## Chapter 3： The Linear Model
 SGD: That is 'on average' the minimization proceeds in the right direction, but is a bit wiggly.(The expectation is the same as GD).
+
+## Chapter 4: overfitting
+Overfitting is the phenomenon where fitting the observed facts (data) well no longer indicates that we will get a decent out-of-sample error, and may actually lead to the opposite effect.
+A typical overfitting scenario, in which a complex model uses its additional degrees of freedom to 'learn' the noise.
+To overfitting, what matters is how the model complexity matches the quantity and quality of the data we have, not how it matches the target function.
+Regularization is a way to combat overfitting, it constrains the learning algorithm to improve out-of-sample error, especally when noise is present.
+From the bias-var view of model, by constraining the learning algorithm to select 'simpler' hypotheses from H, we sacrifice a little bias for a significant gain in var.

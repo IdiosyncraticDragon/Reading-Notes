@@ -125,3 +125,33 @@ yank the text
 
 #### ga (see ctrl-v in insert mode)
 If you want to find out the numeric code for any character in your document, just place the cursor on it and trigger the ga command. This outputs a mes- sage at the bottom of the screen, revealing the character code in decimal and hexadecimal notations.
+
+## Chapter 4
+Vim’s Visual mode allows us to define a selection of text and then operate
+upon it.
+Each time we move our cursor in Visual mode, we change the bounds of the selection. Whereas in Visual mode, we start off by making the
+selection and then trigger the change command.
+
+### Normal Mode
+
+#### v
+The v key is our gateway into Visual mode. From Normal mode, we can press v by itself to enable character-wise Visual mode
+
+#### gv
+Reselect the last visual selection; The only case where it might get confused is if the last selection has since been deleted.
+
+### Visual mode
+We can switch between the different flavors of Visual mode in the same way
+that we enable them from Normal mode.
+
+#### character-wise visual mode
+command c in Normal mode;
+
+#### line-wise visual mode
+command V in Normal mode;
+
+#### block-wise visual mode
+ctrl-V
+
+#### o
+Go to other end of highlighted text.
