@@ -16,6 +16,14 @@
 - the particular case of a quadratic regularizer is called ridge regression. In the context of nueral networks, this approach is called weight decay.
 - the average value of a some function f(x) under a probability distribution p(x) is called the expection of f(x).
 
+- The maximum of a distribution is known as its mode. For Gaussian, the mode coincides with the mean.
+- Data points that are drawn independently from the same distribution are said to be independent and identically distributed, which is often abbreviated to i.i.d
+- It is called marginal probability, because it is obtained by marginalizing, or summing out, the other variables
+-  In practice, it is more convenient to maximize the log of the likelihood function. 1)(可以换). the logarithm is a monotonically increasing function of its argument, maximization of the log of a function is equivalent to maximization of the function itself. 2)(换了有啥好处). it simplifies the subsequent mathematical analysis and also helps numerically because the product of a large number of small probabilities can easily underflow the numerical precision of the computer, and this is resolved by computing instead the sum of the log probabilities.
+- 当通过调整均值和方差来最大化高斯分布的likelihood值时，应该是要同时调整这两个值的，但是通过对高斯分布求ln后发现，这两个值互不相干，所以可以分别调整。（非常好的性质）
+- the significant limitations of the maximum likelihood approach for univariate Gaussian distribution: This approach underestimates the variance of the distribution. This is an example of a phenomenon called bias and is related
+to the problem of over-fitting
+
 ## Chapter 2 Probability distributions
 
 ### Phrase
