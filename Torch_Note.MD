@@ -540,3 +540,5 @@ bias – If False, then the layer does not use bias weights b_ih and b_hh. Defau
 batch_first – If True, then the input and output tensors are provided as (batch, seq, feature)
 dropout – If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
 bidirectional – If True, becomes a bidirectional RNN. Default: False
+
+- view function: reshape the tensor. 可以使用-1参数，不过只有一维可以，-1的意思是这一维度的数字不知道，有程序自己推定。
