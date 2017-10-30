@@ -519,3 +519,24 @@ luarocks install luabitop
    ```
   这样运行快速入门里的例子就没问题了。
 3. 注意，-gpuid 这个参数是从1开始的，如果设成0的话，会自动切换成多核cpu运行。
+
+## py-torch
+
+### python
+
+#### __future__ 模块
+Python提供了__future__模块，把下一个新版本的特性导入到当前版本，于是我们就可以在当前版本中测试一些新版本的特性。
+
+### 常用API
+- torch.bmm: torch.bmm(batch1, batch2, out=None) → Tensor; Performs a batch matrix-matrix product of matrices stored in batch1 and batch2.
+batch1 and batch2 must be 3D Tensors each containing the same number of matrices.
+If batch1 is a b x n x m Tensor, batch2 is a b x m x p Tensor, out will be a b x n x p Tensor.
+
+- class torch.nn.GRU(\*args, \*\*kwargs)
+input_size – The number of expected features in the input x
+hidden_size – The number of features in the hidden state h
+num_layers – Number of recurrent layers.
+bias – If False, then the layer does not use bias weights b_ih and b_hh. Default: True
+batch_first – If True, then the input and output tensors are provided as (batch, seq, feature)
+dropout – If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
+bidirectional – If True, becomes a bidirectional RNN. Default: False
