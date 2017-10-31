@@ -21,8 +21,9 @@
 - It is called marginal probability, because it is obtained by marginalizing, or summing out, the other variables
 -  In practice, it is more convenient to maximize the log of the likelihood function. 1)(可以换). the logarithm is a monotonically increasing function of its argument, maximization of the log of a function is equivalent to maximization of the function itself. 2)(换了有啥好处). it simplifies the subsequent mathematical analysis and also helps numerically because the product of a large number of small probabilities can easily underflow the numerical precision of the computer, and this is resolved by computing instead the sum of the log probabilities.
 - 当通过调整均值和方差来最大化高斯分布的likelihood值时，应该是要同时调整这两个值的，但是通过对高斯分布求ln后发现，这两个值互不相干，所以可以分别调整。（非常好的性质）
-- the significant limitations of the maximum likelihood approach for univariate Gaussian distribution: This approach underestimates the variance of the distribution. This is an example of a phenomenon called bias and is related
-to the problem of over-fitting
+- the significant limitations of the maximum likelihood approach for univariate Gaussian distribution: This approach underestimates （biased variance, need divide by (N-1) to be the unbiased one, page 27~28） the variance of the distribution. This is an example of a phenomenon called bias and is related to the problem of over-fitting.  
+- Note that the bias of the maximum likelihood solution becomes less significant as the number N of data points increases, and in the limit N to infinite the maximum likelihood solution for the variance equals the true variance of the distribution that generated the data. In practice, for anything other than small N, this bias will not prove to be a serious problem.
+- In fact, as we shall see, the issue of bias in maximum likelihood lies at the root of the over-fitting problem.
 
 ## Chapter 2 Probability distributions
 
