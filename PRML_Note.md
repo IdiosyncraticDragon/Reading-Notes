@@ -10,10 +10,16 @@
 - some kinds of pre-processing represent a form of dimensionality reduction.
 - functions, such as polynomial, which are linear in the unkown parameters have important properties and are called linear models.
 - root-mean-square error (RMS)
+
+Overfitting
 - intuitively, over-fitting means that the more flexible parts of the model are incresingly tuned to the random noise on the target values.
 - one technique which is often used to control the over-fitting phenomenon in such case is that of regularization, which involves adding a penalty term to the error function.
 - 用权值来计算regularization项的时候，bias的权值一般是不算进去的，因为如果算进去了，就会导致结果依赖于目标变量的原点位置（就不是bias了）
 - the particular case of a quadratic regularizer is called ridge regression. In the context of nueral networks, this approach is called weight decay.
+
+Probability Theory
+- prior probability p(a) is the probability available before we observe the identity of a.
+- posterior probability p(a|f) of a is the probability obtained after we have observed f.
 - the average value of a some function f(x) under a probability distribution p(x) is called the expection of f(x).
 
 - The maximum of a distribution is known as its mode. For Gaussian, the mode coincides with the mean.
@@ -24,6 +30,7 @@
 - the significant limitations of the maximum likelihood approach for univariate Gaussian distribution: This approach underestimates （biased variance, need divide by (N-1) to be the unbiased one, page 27~28） the variance of the distribution. This is an example of a phenomenon called bias and is related to the problem of over-fitting.  
 - Note that the bias of the maximum likelihood solution becomes less significant as the number N of data points increases, and in the limit N to infinite the maximum likelihood solution for the variance equals the true variance of the distribution that generated the data. In practice, for anything other than small N, this bias will not prove to be a serious problem.
 - In fact, as we shall see, the issue of bias in maximum likelihood lies at the root of the over-fitting problem.
+- 高斯模型有些性质非常好，当以高斯建模likelihood函数的时候，使用maximum likelihood estimator进行优化时，可以利用均值方差可以分布调节的特性来简化求解过程，实际上这会转化成最小化 sum-of-squares error函数（只要在建模时均值和方差无不相关）；而在给定参数的先验的情况下，用maximum posterior (MAP方法)来最大化参数的后验（即给定数据情况下，参数的可能性），从而求解参数，因为参数后验正比于参数先验与参数的likelihood函数的乘积，当先验和likelihood都是高斯时，定义良好的情况下，这可以转成最小化带正则想sum-of-squares函数。（页29~30）
 
 ## Chapter 2 Probability distributions
 
