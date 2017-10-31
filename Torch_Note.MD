@@ -509,6 +509,9 @@ perl multi-bleu.perl data/src-test.txt < pred.txt
 luarocks install luabitop
 ```
 
+### 论文 Bahdanau et al. 2015复现 （opennmt-py)
+#### 数据集WMT14
+特别注意，使用的数据是可以从这里下载的：http://www-lium.univ-lemans.fr/~schwenk/cslm_joint_paper/ （里面的bitexts after selection）。我还专门跑WMT14去下载一遍，WMT14里提供的数据中，UN数据的形式非常不好，使用UN数据自带的extraction.py后得到的en/fr文件的行数不一致，无法使用，而bitexts数据处理过后，数据行数是一致的。
 ## OpenNMT
 
 ### 安装环境
@@ -540,5 +543,11 @@ bias – If False, then the layer does not use bias weights b_ih and b_hh. Defau
 batch_first – If True, then the input and output tensors are provided as (batch, seq, feature)
 dropout – If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
 bidirectional – If True, becomes a bidirectional RNN. Default: False
+- GRU在bidirection为true情况下的输出隐藏状态维度是(2,batch_size, hidden_size)
+- 如果想变量能自动求导的话，在定义时需要将变量包裹进autograd.Variable里，并在能适用cuda的情况下，适用.cuda()数据
+- 特别注意GRU单元的维度结构为：输入:input, hidden_0, input=>(seq_len, batch, input_size),  hidden=>(num_layers * num_directions, batch, hidden_size);输出:output, hidden_n, output=>(seq_len, batch, hidden_size * num_directions),hidden_n=>(num_layers * num_directions, batch, hidden_size)
 
 - view function: reshape the tensor. 可以使用-1参数，不过只有一维可以，-1的意思是这一维度的数字不知道，有程序自己推定。
+
+### 实现细节
+- 对于长度不定的输入语句，如何实现batch模型的输入？
