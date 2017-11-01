@@ -512,6 +512,10 @@ luarocks install luabitop
 ### 论文 Bahdanau et al. 2015复现 （opennmt-py)
 #### 数据集WMT14
 特别注意，使用的数据是可以从这里下载的：http://www-lium.univ-lemans.fr/~schwenk/cslm_joint_paper/ （里面的bitexts after selection）。我还专门跑WMT14去下载一遍，WMT14里提供的数据中，UN数据的形式非常不好，使用UN数据自带的extraction.py后得到的en/fr文件的行数不一致，无法使用，而bitexts数据处理过后，数据行数是一致的。
+
+#### 数据预处理
+- 内存的占用非常巨大，en文件1.7G，fr文件2G，但是在preprocess.py运行时，会占完30+G，然后因为内存不够而进程idle（lua版的opennmt没有这个问题，所以要不是bug要不就是有解决方法的）。在preprocess.py阶段使用-dynamic_dict标签尝试下：有所改善，内存是逐渐增加，而且在占满内存后进程还有以CPU利用20~50%的速度运行，但是占满内存这种事肯定是不正常的；通过查看github的issue，确定这是个bug=》还是用lua版的进行数据预处理吧，但是lua处理后的数据opennmt-py是用不了的，因为它保存的是lua编写的数据结构，而不是单纯的文本信息。
+
 ## OpenNMT
 
 ### 安装环境
@@ -526,6 +530,10 @@ luarocks install luabitop
 ## py-torch
 
 ### python
+
+#### 语言特性
+
+- （内置）next函数：函数必须接收一个可迭代对象参数，每次调用的时候，返回可迭代对象的下一个元素。如果所有元素均已经返回过，则抛出StopIteration 异常。
 
 #### __future__ 模块
 Python提供了__future__模块，把下一个新版本的特性导入到当前版本，于是我们就可以在当前版本中测试一些新版本的特性。
