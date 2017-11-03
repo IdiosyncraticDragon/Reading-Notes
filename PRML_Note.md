@@ -32,6 +32,14 @@ Probability Theory
 - In fact, as we shall see, the issue of bias in maximum likelihood lies at the root of the over-fitting problem.
 - 高斯模型有些性质非常好，当以高斯建模likelihood函数的时候，使用maximum likelihood estimator进行优化时，可以利用均值方差可以分布调节的特性来简化求解过程，实际上这会转化成最小化 sum-of-squares error函数（只要在建模时均值和方差无不相关）；而在给定参数的先验的情况下，用maximum posterior (MAP方法)来最大化参数的后验（即给定数据情况下，参数的可能性），从而求解参数，因为参数后验正比于参数先验与参数的likelihood函数的乘积，当先验和likelihood都是高斯时，定义良好的情况下，这可以转成最小化带正则想sum-of-squares函数。（页29~30）
 
+Model selection
+- one major drawback of cross-validation is the number of training runs that must be performed is increased by a factor of S (S-folder cross-validation, separate the data into S buckets), this can prove problematic for models in which the training is itself computationally expensive. A further problem with techniques such as cross-validation that use separate data to assess performance is that we might have multiple complexity parameters for a single model(for instances, several regularization parameters), exploring combinations of settings for such parameters could, in the worst case, require a number of training runs that is exponential in the number of parameters.
+
+The curse of dimensionality
+- although the curse of dimensionality certainly raises important issuses for pattern recognition apllications, it does not prevent us from finding effective techniques applicable to high-dimensional spaces. The reasons for this are twofold.
+  - First, real data will often be confined to a region of the space having lower effective dimensionality, and in particular the directions over which important variantions in the target variables occur may be so confined.
+  - Second, real data will typically exhibit some smoothness properties (at least locally) so that for the most part small changes in the input variables will produce small changes in the target variables, and so we can exploit local interpolation-like techniques to allow us to make rpedictions of the target variables for new values of the input variables.
+
 ## Chapter 2 Probability distributions
 
 ### Phrase
