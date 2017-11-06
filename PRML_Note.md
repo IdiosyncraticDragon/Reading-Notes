@@ -40,6 +40,28 @@ The curse of dimensionality
   - First, real data will often be confined to a region of the space having lower effective dimensionality, and in particular the directions over which important variantions in the target variables occur may be so confined.
   - Second, real data will typically exhibit some smoothness properties (at least locally) so that for the most part small changes in the input variables will produce small changes in the target variables, and so we can exploit local interpolation-like techniques to allow us to make rpedictions of the target variables for new values of the input variables.
 
+Decision Theory
+- decision theory discussed in this book is, when combined with prbability theory, to make optimal decisions in situations involving uncertainty.
+- One intuitive decision is choosing the class having the higher posterior probability when use Bayes' theorem to make decision.
+- The joint probability distribution p(x,t) provides a complete summary of the uncertainty associated with these variables.
+- Inference: determination of p(x,t) from a set of training data is an example of inference and is typically a very difficult problem.
+- 对于class之间没有重要性区别的分类，我们最小化数据的错分率（minimizing the misclassification rate）使我们的目的；而对于class之间有重要性区别的，则要最小化重要性的期望（minimizing the expected loss）。
+- Decision region, boundaries, surface: 对于最小化错分率的问题, we need a rule that assigns each value of x to one of the avaiable classes. Such a rule will divide the input space into regions {1...,k} called decision regions, one for each class. The boundaries between decision regions are called decision boundaries or decision surfaces.
+- reject option: In some applications, it will be appropriate to avoid making decisions on the difficult cases in anticipation of a lower error rate on those examples for which a classification decision is made. (which 是修饰those examples的，a classification deicion is made for some examples, these examples are expected to have a lower error, by avoid making decisions on other difficult cases)
+- Inference and decision: classification can be viewed as inference stage + decision stage. Inference stage: we use training data to learna model for p(c|x). Decision stage: we use these posterior probabilities p(c|x) to make optimal class assignments
+- Discriminant function: An alternative of the view of classification is solving both inference and decision together, by simply learning a function that maps inputs x directly into decisions.
+- Three distinct approaches to solve decision problems: generative models, discriminative models and discriminant function.
+  - generative models: approaches that explicityly or implicityly model the distribution of inputs as well as outputs (joint distribution) are known as generative models, because by sampling from them it is possible to generate synthetic data points in the input space. A example procedure:
+    - solve inference problem of determing the class-conditional densities p(x|C).
+    - separately infer the prior class probabilities p(C).
+    - use bayes' theorem to find posterior class probabilities p(C|x).
+    - use decision theory to find decision regions.
+  - discriminative models: approaches that model the posterior probabilites directly are called dicriminative models.
+    - solve inference problem of determining the posterior class probability p(C|x)
+    - use decision theory to find decision regions
+  - discriminant function: direction map the x to y, probabilities play no role. (like softmax is not discriminant function, it just predict probabilities)
+- generative model最强最全，可以应用面最广但是需要大量的计算资源才能算出来；discriminative models对于单纯的分类问题来说，最有效率；discriminant functiuon 是不依赖概率的分类方式。
+
 ## Chapter 2 Probability distributions
 
 ### Phrase
