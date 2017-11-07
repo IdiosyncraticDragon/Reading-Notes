@@ -510,12 +510,14 @@ luarocks install luabitop
 ```
 
 ### 论文 Bahdanau et al. 2015复现 （opennmt-py)
+pytorch这种还没完全成熟的项目，好多坑啊。。。
+
 #### 数据集WMT14
 特别注意，使用的数据是可以从这里下载的：http://www-lium.univ-lemans.fr/~schwenk/cslm_joint_paper/ （里面的bitexts after selection）。我还专门跑WMT14去下载一遍，WMT14里提供的数据中，UN数据的形式非常不好，使用UN数据自带的extraction.py后得到的en/fr文件的行数不一致，无法使用，而bitexts数据处理过后，数据行数是一致的。
 
 #### 数据预处理
 - 内存的占用非常巨大，en文件1.7G，fr文件2G，但是在preprocess.py运行时，会占完30+G，然后因为内存不够而进程idle（lua版的opennmt没有这个问题，所以要不是bug要不就是有解决方法的）。在preprocess.py阶段使用-dynamic_dict标签尝试下：有所改善，内存是逐渐增加，而且在占满内存后进程还有以CPU利用20~50%的速度运行，但是占满内存这种事肯定是不正常的；通过查看github的issue，确定这是个bug=》还是用lua版的进行数据预处理吧，但是lua处理后的数据opennmt-py是用不了的，因为它保存的是lua编写的数据结构，而不是单纯的文本信息。 目前发现内存占用大的原因是src/tgt_seq_length太小了，将它设大可以避免内存耗尽问题。
-- 特别注意，数据是要做Tokenization的，未做tokennization的数据，现在训练了2个epoch，预测出来的还全是unk。
+- 特别注意，数据是要做Tokenization的，未做tokennization的数据，现在训练了2个epoch，预测出来的还全是unk。训练3个epoch后还是如此，停止此训练。
 
 
 ### 论文training rnn as fast as CNNs，Lei et al.,2017复现 (opennmt-py)
@@ -524,6 +526,7 @@ luarocks install luabitop
 
 ### 数据预处理
 - 依然有内存开销极大的情况. 首先这个在building training阶段出现这个错误的时候，通过将onmt/IO.py中196行的filter_pred设为None可以解决这个而问题，filter_pred是用在torchtext.data.Dataset这个函数中的，不在opennmt项目中，它的用途是在提供程序选项opt的情况，根据opt中的语句最大长度，过滤掉数据中长度长于最大长度的语句。目前可以认为是这个过滤过程出了问题，变成了一个大耗内存的操作，但是这个问题并不是比如出现的，根据这个issuse（https://github.com/OpenNMT/OpenNMT-py/pull/291）的看法，是因为默认设置的语句最大长度为50，而训练数据里面全部都比50大，于是会出现这个问题（既出现bug，把内存耗完），这个issuse的做法是在preprocess是通过选项设置将语句的最大长度设置为1000，但即使这样内存开销还是很大，可见IO代码中还是有问题，但是不是会出现一直增长导致内存耗尽的问题。目前正在测试这个做法是否有效：靠谱，能解决这问题！
+- vocabulary限制为50K，要做tokenizattion，translation时需要unk replacement，没有明确说需要做句子过滤
 
 ### 训练
 - 禁用input_feed 通过设置-input_feed 0, 这个量是当bool量在代码里用的
@@ -535,6 +538,18 @@ luarocks install luabitop
   - 安装pynvrtc
   - 安装cupy时报错，ld找不多-lcuda，这是找不多/usr/lib/libcuda.so这么一个共享链接库，因为ld不会用到LD_LIBRARY_PATH这个环境变量。始终无法解决这个问题，很可能是因为cuda的版本不对要求
   - 在一个cuda已经安装好的环境里，安装pytorch（github主页教程，python setup.py install时需要编译c语言），再安装opennmt-py
+### 测试
+- 测试出问题，不明所以，原因出在pytorch/text/torchtext上面，要求强制回退到0.1.1版本。回退之后，出现的问题是cupy库的CUDA_ERROR_INVALID_HANDLE问题。坑爹的是找了一天，从sru的原作者的项目issue中发现（https://github.com/taolei87/sru/issues/8），这个可能是代码本身的问题，它只能用一块显卡，既是是不同的进程运行，也只能运行在一块显卡上面。解决方法(我使用解决方法2)
+```
+可设置环境变量CUDA_VISIBLE_DEVICES，指明可见的cuda设备
+方法1： 在/etc/profile或~/.bashrc的配置文件中配置环境变量(/etc/profile影响所有用户，~/.bashrc影响当前用户使用的bash shell)
+在/etc/profile文件末尾添加以下行：
+export CUDA_VISIBLE_DEVICES=0,1 ##仅显卡设备0,1GPU可见。可用的GPU可通过nvidia-smi -L命令查看
+:wq保存并退出
+source /etc/profile使配置文件生效
+方法2：若上述配置无效，可在执行cuda程序时指明参数，如
+CUDA_VISIBLE_DEVICES=0,1 ./cuda_executable
+```
 
 ## OpenNMT
 
