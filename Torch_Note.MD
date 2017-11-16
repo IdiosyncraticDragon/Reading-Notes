@@ -516,8 +516,9 @@ pytorch这种还没完全成熟的项目，好多坑啊。。。
 特别注意，使用的数据是可以从这里下载的：http://www-lium.univ-lemans.fr/~schwenk/cslm_joint_paper/ （里面的bitexts after selection）。我还专门跑WMT14去下载一遍，WMT14里提供的数据中，UN数据的形式非常不好，使用UN数据自带的extraction.py后得到的en/fr文件的行数不一致，无法使用，而bitexts数据处理过后，数据行数是一致的。
 
 #### 数据预处理
-- 内存的占用非常巨大，en文件1.7G，fr文件2G，但是在preprocess.py运行时，会占完30+G，然后因为内存不够而进程idle（lua版的opennmt没有这个问题，所以要不是bug要不就是有解决方法的）。在preprocess.py阶段使用-dynamic_dict标签尝试下：有所改善，内存是逐渐增加，而且在占满内存后进程还有以CPU利用20~50%的速度运行，但是占满内存这种事肯定是不正常的；通过查看github的issue，确定这是个bug=》还是用lua版的进行数据预处理吧，但是lua处理后的数据opennmt-py是用不了的，因为它保存的是lua编写的数据结构，而不是单纯的文本信息。 目前发现内存占用大的原因是src/tgt_seq_length太小了，将它设大可以避免内存耗尽问题。
-- 特别注意，数据是要做Tokenization的，未做tokennization的数据，现在训练了2个epoch，预测出来的还全是unk。训练3个epoch后还是如此，停止此训练。
+- 内存的占用非常巨大，en文件1.7G，fr文件2G，但是在preprocess.py运行时，会占完30+G，然后因为内存不够而进程idle（lua版的opennmt没有这个问题，所以要不是bug要不就是有解决方法的）。在preprocess.py阶段使用-dynamic_dict标签尝试下：有所改善，内存是逐渐增加，而且在占满内存后进程还有以CPU利用20~50%的速度运行，但是占满内存这种事肯定是不正常的；通过查看github的issue，确定这是个bug=》还是用lua版的进行数据预处理吧，但是lua处理后的数据opennmt-py是用不了的，因为它保存的是lua编写的数据结构，而不是单纯的文本信息。 目前发现内存占用大的原因是src/tgt_seq_length太小了，将它设大可以避免内存耗尽问题, 但是依然要使用巨量的内存。
+- 特别注意，数据是要做Tokenization的，未做tokennization的数据，现在训练了2个epoch，预测出来的还全是unk。训练3个epoch后还是如此，停止此训练,训练的是lua版的模型。
+- 现在改成了2层的模型，用Opennmt-py在在dgx-1上训练，训练了3个epoch已经接近了论文的效果。
 
 
 ### 论文training rnn as fast as CNNs，Lei et al.,2017复现 (opennmt-py)
@@ -526,7 +527,7 @@ pytorch这种还没完全成熟的项目，好多坑啊。。。
 
 ### 数据预处理
 - 依然有内存开销极大的情况. 首先这个在building training阶段出现这个错误的时候，通过将onmt/IO.py中196行的filter_pred设为None可以解决这个而问题，filter_pred是用在torchtext.data.Dataset这个函数中的，不在opennmt项目中，它的用途是在提供程序选项opt的情况，根据opt中的语句最大长度，过滤掉数据中长度长于最大长度的语句。目前可以认为是这个过滤过程出了问题，变成了一个大耗内存的操作，但是这个问题并不是比如出现的，根据这个issuse（https://github.com/OpenNMT/OpenNMT-py/pull/291）的看法，是因为默认设置的语句最大长度为50，而训练数据里面全部都比50大，于是会出现这个问题（既出现bug，把内存耗完），这个issuse的做法是在preprocess是通过选项设置将语句的最大长度设置为1000，但即使这样内存开销还是很大，可见IO代码中还是有问题，但是不是会出现一直增长导致内存耗尽的问题。目前正在测试这个做法是否有效：靠谱，能解决这问题！
-- vocabulary限制为50K，要做tokenizattion，translation时需要unk replacement，没有明确说需要做句子过滤
+- vocabulary限制为50K，要做tokenizattion，translation时需要unk replacement，没有明确说需要做句子过滤,但是如果它参考的是luong的话，那么句子长度是不能超过50的。
 
 ### 训练
 - 禁用input_feed 通过设置-input_feed 0, 这个量是当bool量在代码里用的
