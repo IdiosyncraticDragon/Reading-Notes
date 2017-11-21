@@ -81,3 +81,25 @@ __正交单位向量组__: 见书籍80页 2.46,2.47式．
 __antisymmetric matrix__:又称反对称矩阵或是斜对称矩阵，其转置矩阵和自身的加法逆元相等．既：AT = −A
 
 ### Gaussian distribution
+
+## Chapter 5 Neural Networks
+
+### basic concepts
+
+- 'multipayer perceptron' is really a misnomeer, because the model comprises multiple layers of logistic regression models (with continuous nonlinearityies) rather than multiple perceptrons (with discontinuous nonlinearityies).
+- Our focus in this chapter is therefore on neural networks as efficient models for statistical pattern recognition.
+- a feed-forward architecture ensures that the outputs are deterministic functions of the inputs, in other words to one having no closed directed cycles.
+- Neural networks are therefore said to be universal approximators. For example, a two-layer network with linear outputs can uniformly approximate any continuous function on a compact input domain to arbitrary accuracy provided the network has a sufficiently large number of hidden units.
+- Weight-space symmetries：One property of feed-forward networks, which will play a role when we consider Bayesian model comparison, is that multiple distinct choices for the weight vector w can all give rise to the same mapping function from inputs to outputs.就是说，在模型空间中，有很多近似的模型。这可以通过一个简单的思想实验验证，对于一个两层权值神经网络，隐藏层的激活函数是tanh，tanh是奇函数；当将所有的权值取反时，tanh的值也会取反，但是因为tanh连向输出的权值也取反了，所以整个输出其实没变，那么对于每个隐藏神经元，所有与它的相连的权值取反都不会对网络造成什么印象，那么对于这个网络结构，它的任意一种权值取值方式都起码有2的M次方（M是隐藏层神经元个数）种同样结果的模型。
+
+- 回归问题用sum-of-squares error作为loss函数，分类问题用交叉熵作为误差函数，其实都是从条件概率之积的negtively log 结果得来的，只是因为不同为题的条件概率建模方式不一样，所以得出的loss函数不一样。
+
+- 问题使用什么样的输出函数和怎么样的loss函数，是要根据问题的建模而来的，目的都是最大化分类随机变量在给定网络参数下的likelihood（一般通过将所有数据上likelihood的乘积转换为negtive log来分析问题）。In summary, there is a natural choice of both output unit activation function and matching error function, according to the type of problem being solved.
+  - 对于回归问题，通过假设输出结果与标准结果之间有高斯噪声，我们可以自然的推导出，需要用线性回归生成输出，使用sum-of-square error作为loss函数；
+  - 对于不相关的多类分类问题，使用sigmoid生成输出，使用交叉熵作为loss函数；
+  - 对于相关多类的分类问题，使用softmax生成输出（以为这个保证输出一个概率分布），使用多类相关交叉熵函数作为loss函数。
+
+- softmax函数有种特性，就是输入的x在全部维度上都加上一个常数的话，softmax的值是不变的，这会导致softmax函数权值空间的一些方向上没有曲率，一般通过加正则项的方法来缓解这个问题。这是因为softmax是借助exp函数对x做变化，而exp对指数的加法可以拆借乘法，因此如果x所有维度加了个常数的话，相当于所有exp项前乘个常数，可以通过softmax的除法消去。
+
+- 对于神经网络模型的权值优化，Because there is clearly no hope of finding an analytical solution to the equation ∇E(w) = 0， we resort to iterative numerical procedures.
+- Most techniques involve choosing some initial value w(0) for the weight vector and then moving through weight space in a succession of steps of the form w(τ+1) = w(τ) +Δw(τ). Different algorithms involve different choices for the weight vector update Δw(τ).

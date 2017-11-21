@@ -563,6 +563,44 @@ CUDA_VISIBLE_DEVICES=0,1 ./cuda_executable
   这样运行快速入门里的例子就没问题了。
 3. 注意，-gpuid 这个参数是从1开始的，如果设成0的话，会自动切换成多核cpu运行。
 
+## OpenNMT-py
+>2017.11
+
+### API和模块
+
+### 实现细节
+>使用的python,pytorch函数，自己定义的函数等
+
+- itertools.count函数：
+count(),	参数：start, [step]；	输出：start, start+step, start+2*step, …
+示例：count(10) --> 10 11 12 13 14 ...
+实现中使用了yield关键字，每次调用才返回一个结果，不是一次产生一个列表。
+
+- collections.defaultdict()：
+众所周知，在Python中如果访问字典中不存在的键，会引发KeyError异常。collections.defaultdic本身提供了默认值，所以不会出现keyerror异常。
+defaultdict类的初始化函数接受一个类型作为参数，当所访问的键不存在的时候，可以实例化一个值作为默认值；或者可以接受一个无参函数作为初始化参数，以这个函数的返回值作为默认值。
+示例：
+1.
+$ dd = defaultdict(list)
+$ dd['foo']
+[]
+2.
+$ counts = defaultdict(lambda: 0)
+$ counts['foo']
+0
+
+- vocab 和fields的结构关系，极其复杂，我觉得应该忽略不管。
+
+- embedding构建中的，接受的参数feature_dict是什么：暂时不知道，跑出来是空列表
+- embedding接受的参数，word_dict.stoi包含的是什么：里面是以单词为键，以一个整型为值的字典。应该是用来生成word embedding的单词序号
+word_dict = fields['src'/'tgt'].vocab这格式直接从vocab.pt中load出来的src和tgt的vocab，
+
+- 在构建RNNEncoder中用到的getattr函数：
+getattr(object, name[,default])
+获取对象object的属性或者方法，如果存在打印出来，如果不存在，打印出默认值，默认值可选。
+需要注意的是，如果是返回的对象的方法，返回的是方法的内存地址，如果需要运行这个方法，
+可以在后面添加一对括号。
+
 ## py-torch
 
 ### python
@@ -592,6 +630,7 @@ bidirectional – If True, becomes a bidirectional RNN. Default: False
 - 特别注意GRU单元的维度结构为：输入:input, hidden_0, input=>(seq_len, batch, input_size),  hidden=>(num_layers * num_directions, batch, hidden_size);输出:output, hidden_n, output=>(seq_len, batch, hidden_size * num_directions),hidden_n=>(num_layers * num_directions, batch, hidden_size)
 
 - view function: reshape the tensor. 可以使用-1参数，不过只有一维可以，-1的意思是这一维度的数字不知道，有程序自己推定。
+
 
 ### 实现细节
 - 对于长度不定的输入语句，如何实现batch模型的输入？
