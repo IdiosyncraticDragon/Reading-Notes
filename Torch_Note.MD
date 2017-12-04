@@ -523,7 +523,7 @@ pytorch这种还没完全成熟的项目，好多坑啊。。。
 
 ### 论文training rnn as fast as CNNs，Lei et al.,2017复现 (opennmt-py)
 ### 数据集WMT14 en-to-de
-数据集从 https://nlp.stanford.edu/projects/nmt/ 下载。
+数据集从 https://nlp.stanford.edu/projects/nmt/ 下载。**特别注意** 这个数据不是通用的数据，整整两周，我用这个数据没有浮现sru、luong和transfomer，因为这个数据内部是有作者专门为自己的程序而插入的mark的。在数据的下载链接那并没说这个事。
 
 ### 数据预处理
 - 依然有内存开销极大的情况. 首先这个在building training阶段出现这个错误的时候，通过将onmt/IO.py中196行的filter_pred设为None可以解决这个而问题，filter_pred是用在torchtext.data.Dataset这个函数中的，不在opennmt项目中，它的用途是在提供程序选项opt的情况，根据opt中的语句最大长度，过滤掉数据中长度长于最大长度的语句。目前可以认为是这个过滤过程出了问题，变成了一个大耗内存的操作，但是这个问题并不是比如出现的，根据这个issuse（https://github.com/OpenNMT/OpenNMT-py/pull/291）的看法，是因为默认设置的语句最大长度为50，而训练数据里面全部都比50大，于是会出现这个问题（既出现bug，把内存耗完），这个issuse的做法是在preprocess是通过选项设置将语句的最大长度设置为1000，但即使这样内存开销还是很大，可见IO代码中还是有问题，但是不是会出现一直增长导致内存耗尽的问题。目前正在测试这个做法是否有效：靠谱，能解决这问题！
@@ -568,6 +568,61 @@ CUDA_VISIBLE_DEVICES=0,1 ./cuda_executable
 
 ### API和模块
 
+#### onmt/Translator.py包含已训练好模型的调用
+但是OpenNMT-py的调用结构封装的很严实，并不是很好进行修改。
+
+- 层次查找：下面是一个模型load后的树状结构，一般叶子节点是可以访问到存储参数的。
+```
+NMTModel (
+  (encoder): RNNEncoder (
+    (embeddings): Embeddings (
+      (make_embedding): Sequential (
+        (emb_luts): Elementwise (
+          (0): Embedding(50002, 1000, padding_idx=1)
+        )
+      )
+    )
+    (rnn): LSTM(1000, 1000, num_layers=4, dropout=0.2)
+  )
+  (decoder): InputFeedRNNDecoder (
+    (embeddings): Embeddings (
+      (make_embedding): Sequential (
+        (emb_luts): Elementwise (
+          (0): Embedding(50004, 1000, padding_idx=1)
+        )
+      )
+    )
+    (dropout): Dropout (p = 0.2)
+    (rnn): StackedLSTM (
+      (dropout): Dropout (p = 0.2)
+      (layers): ModuleList (
+        (0): LSTMCell(2000, 1000)
+        (1): LSTMCell(1000, 1000)
+        (2): LSTMCell(1000, 1000)
+        (3): LSTMCell(1000, 1000)
+      )
+    )
+    (attn): GlobalAttention (
+      (linear_in): Linear (1000 -> 1000)
+      (linear_out): Linear (2000 -> 1000)
+      (sm): Softmax ()
+      (tanh): Tanh ()
+    )
+  )
+  (generator): Sequential (
+    (0): Linear (1000 -> 50004)
+    (1): LogSoftmax ()
+  )
+)
+```
+
+- Embedding层：pytorch的Embedding在这里被层层封装
+self.model.encoder.embeddings.make_embedding[0][0].weight才能访问到保存的embendding。
+
+- LSTM层：
+  - Encoder节点的LSTM是pytorch自带的LSTM所以可以用 **weight_ih_l层数** 这样的方法来访问参数。
+  - Decoder节点的LSTM可能是OpenNMT-py自己构建的StackedRNN，但是它的构成单元还是pytorch的RNNCell，所以可以追溯到构建单元的LSTMCell，然后用 **weight_ih**/**wegiht_hh**/**bias_ih**/**bias_hh** 这些属性变量来访问参数。
+
 ### 实现细节
 >使用的python,pytorch函数，自己定义的函数等
 
@@ -609,6 +664,36 @@ getattr(object, name[,default])
 
 - （内置）next函数：函数必须接收一个可迭代对象参数，每次调用的时候，返回可迭代对象的下一个元素。如果所有元素均已经返回过，则抛出StopIteration 异常。
 
+##### Variable变量
+- data保存数据，grad保存梯度，都是tensor，不会自动更新data需要手动通过grad来更新data
+```
+w1=Variable(torch.Tensor([1.0, 2.0, 3.0]), requires_grad=True)
+w1.data
+w1.grad
+```
+- 使用backward()函数计算梯度，注意梯度是累加到每个相关Variable的grad张量中的,不对grad清零的话它会一直累加下去
+```
+x=Variable(torch.Tensor([1,1,1]))
+w1=Variable(torch.Tensor([1.0, 2.0, 3.0]), requires_grad=True)
+d1=w1.dot(x)
+d2=w1.dot(torch.cat((d,d,d)))
+d2.backward()
+
+w1.grad
+Out[44]:
+Variable containing:
+ 12
+ 12
+ 12
+[torch.FloatTensor of size 3]
+```
+注意，这里计算的时候先计算d1->d2时w1的梯度，为6，存到grad中；再极端delta d1到w1的梯度，分别诶(1+2+3)=6.加起来是12.
+
+- 如果要重复计算一个计算流图的梯度的话（就是同一个输入做两次backward），需要在第一次backward是设置retain_graph=True
+这个的判断应该不是通过某个计算过程中最后的地方有没有做过backward判断，而是整个图中是否已经有哪个带grad的参数被更新了，有就会报错（需要retain_graph）。
+所以计算流程中有一部分做要先做backward，先做的就要用retain_graph.对于给定的x，截止最后一次backward前，都要如此。
+
+
 #### __future__ 模块
 Python提供了__future__模块，把下一个新版本的特性导入到当前版本，于是我们就可以在当前版本中测试一些新版本的特性。
 
@@ -625,12 +710,41 @@ bias – If False, then the layer does not use bias weights b_ih and b_hh. Defau
 batch_first – If True, then the input and output tensors are provided as (batch, seq, feature)
 dropout – If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
 bidirectional – If True, becomes a bidirectional RNN. Default: False
+获取GRU保存权值的方法是通过下面几个属性变量：
+weight_ih_l层数，input-hidden
+weight_hh_k层数，hidden-hidden
+bias_in_l层数，input-hidde bias
+bias_hh_l层数，hidden-hidden bias
+```
+> encoder.gru.weight_ih_l0.size()
+torch.Size([1500, 500])
+```
+
 - GRU在bidirection为true情况下的输出隐藏状态维度是(2,batch_size, hidden_size)
 - 如果想变量能自动求导的话，在定义时需要将变量包裹进autograd.Variable里，并在能适用cuda的情况下，适用.cuda()数据
 - 特别注意GRU单元的维度结构为：输入:input, hidden_0, input=>(seq_len, batch, input_size),  hidden=>(num_layers * num_directions, batch, hidden_size);输出:output, hidden_n, output=>(seq_len, batch, hidden_size * num_directions),hidden_n=>(num_layers * num_directions, batch, hidden_size)
 
 - view function: reshape the tensor. 可以使用-1参数，不过只有一维可以，-1的意思是这一维度的数字不知道，有程序自己推定。
 
+- torch.squeeze(tensor [, dim]):将tensor中1的的维度去掉，如nx1xm,经过squeeze后变成nxm;如果指定了dim，则事当dim维为1时去掉那一维，不然维持不变。
+
+- torch.nn.utils.rnn.pack_padded_sequence(inut, lengths, batch_first=False) => PackedSequence object
+Packs a Variable containing padded sequences of variable length. Input can be of size  __TXBX*__ where T is the length of the longest sequence (equal to lengths[0]), B is the batch size, and * is any number of dimensions (including 0). If __batch_first__ is True __BxTx*__ inputs are expected. The sequences should be sorted by length in a decreasing order, i.e. input[:,0] should be the longest sequence, and input[:, B-1] the shortest one.
+
+- torch.nn.utils.rnn.pad_packed_sequence(sequence, batch_first=False, padding_value=0.0) => (Variable containing the padded sequence, [lengths of each sequence in the batch])
+Pads a packe batch of variable length sequences. It is an inverse operation to pack_padded_sequence.
+The reurened Variable's data will be of size __TXBX*__. If __batch_first__ is True, the data will be transposed into __BXTX*__ format.
+
+- torch.nn.Embedding
+A simple lookup table taht stores embeddings of a fixed dictionary and size.
+This module is often used to store word embeddings and retrieve them using indices. The input to the module is a list of indices, and the output is the corresponding word embeddings.
+想要修改这个对象的权值，需要通过embedding.weight.data来进行修改。
+
+- torch.nn.functional.log_softmax(input, dim=None)
+input is Variable, dim is the dimension along which log_softmax will be computed.
+
+- Tensor.contiguous() -> Tensor
+Returens a contiguous tensor containing the same data as this tensor. Contiguous tensor is contiguous in memeory in C order. If this tensor is contiguous, this function returns the origianl tensor.
 
 ### 实现细节
 - 对于长度不定的输入语句，如何实现batch模型的输入？
