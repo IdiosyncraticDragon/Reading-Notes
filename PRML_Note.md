@@ -21,6 +21,7 @@ Probability Theory
 - prior probability p(a) is the probability available before we observe the identity of a.
 - posterior probability p(a|f) of a is the probability obtained after we have observed f.
 - the average value of a some function f(x) under a probability distribution p(x) is called the expection of f(x).
+- likelihood function p(D|w) is evaluated for the observed data set D and can be viewed as a function of the parameter vector w. It expresses how probable the observed data set is for different settings of the parameter vector w.
 
 - The maximum of a distribution is known as its mode. For Gaussian, the mode coincides with the mean.
 - Data points that are drawn independently from the same distribution are said to be independent and identically distributed, which is often abbreviated to i.i.d
@@ -103,3 +104,28 @@ __antisymmetric matrix__:又称反对称矩阵或是斜对称矩阵，其转置�
 
 - 对于神经网络模型的权值优化，Because there is clearly no hope of finding an analytical solution to the equation ∇E(w) = 0， we resort to iterative numerical procedures.
 - Most techniques involve choosing some initial value w(0) for the weight vector and then moving through weight space in a succession of steps of the form w(τ+1) = w(τ) +Δw(τ). Different algorithms involve different choices for the weight vector update Δw(τ).
+
+## Chapter 4 Linear model for classification
+
+### The Laplace Approximation
+When the posterior distribution is no longer Gaussian, it is necessary to introduce some  form of approximation for the distribution. This section introduces a simple but widely used framework called Laplace approximation, that aims to find  a Gaussian approximation to a probability density defined over a set of continuous variables.
+
+高斯分布有个好的性质是，当它做过log处理后会变成x与均值的差平方的结构。而将任意的函数进过泰勒展开，它的二次项部分也是个差平方结构。如果这个函数有一阶的local optimal的话，那么他在这个local optimal点的二次泰勒展开，就刚好可以得到一个常数加上 x与均值差平方的结构，这样就可以和高斯分布对应上。
+
+
+## Chapter 5 Neural networks
+
+### 5.7 Bayesian Neural Networks
+
+## Chapter 10 Approximate Inference
+
+This chapter talks about some deterministic approximation schemes. These are based on analytical approximations to the posterior distribution, for example by assuming that it factorizes in a particular way or that it has a specific parametric form such as a Gaussian.
+
+### Variational Inference
+- variational inference is highly related to calcuus of variations
+- variational optimization be applied to the inference problem.
+- functional derivative: __functional__ as a mapping that takes a function as the input and that returns the value of the functional as the output. An example is entropy. functional derivative, which expresses how the value of the functional changes in response to infinitesimal changes to the input function.
+
+#### factorialzed distributions
+- 首先对先验的假设设置限制，第一它是有限的函数组成，其二它由有限个子分布乘积而的。这些子分布被称为factors.
+- 优化的过程变为optimizing with respect to each factors in turn.

@@ -616,12 +616,16 @@ NMTModel (
 )
 ```
 
+#### 常用的结构单元
 - Embedding层：pytorch的Embedding在这里被层层封装
 self.model.encoder.embeddings.make_embedding[0][0].weight才能访问到保存的embendding。
 
 - LSTM层：
   - Encoder节点的LSTM是pytorch自带的LSTM所以可以用 **weight_ih_l层数** 这样的方法来访问参数。
   - Decoder节点的LSTM可能是OpenNMT-py自己构建的StackedRNN，但是它的构成单元还是pytorch的RNNCell，所以可以追溯到构建单元的LSTMCell，然后用 **weight_ih**/**wegiht_hh**/**bias_ih**/**bias_hh** 这些属性变量来访问参数。
+
+- Generator:
+  这是指从网络output部分到预测结果部分的衔接结构
 
 ### 实现细节
 >使用的python,pytorch函数，自己定义的函数等
