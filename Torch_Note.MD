@@ -615,6 +615,12 @@ NMTModel (
   )
 )
 ```
+这实际上pytorch的nn.Module的子类。
+这个结构的展示会在语句
+```
+onmt.ModelConstructor.make_base_model
+```
+执行后打印到控制台。
 
 #### 常用的结构单元
 - Embedding层：pytorch的Embedding在这里被层层封装
@@ -626,6 +632,14 @@ self.model.encoder.embeddings.make_embedding[0][0].weight才能访问到保存�
 
 - Generator:
   这是指从网络output部分到预测结果部分的衔接结构
+
+- 如何遍历一个nn.Module中的所有参数。
+利用nn.Module中返回可迭代对象的方法：modules(),named_modules(), named_children(),named_parameters(),parameters(). 下面说明具体异同。
+  - modules():只把所有的module返回，不返回对应的名称，同时复制产生的module只返回一次（即其实指向同一个对象）。
+  - named_modules():顾名思义，和上面方法对比，区别在于会返回module的名字。
+  - named_children(): 这个方法只返回model的一级children model，一级的一次是广度搜索搜一层。
+  - named_parameters(): 这个返回的是带参数的module的名字（带有层级的名字，即'xx.xxx.xxx')和参数Tensor构成。在这里对参数tensor的修改直接对应到原始tensor的内容。
+  - parameters(): 只返回参数tensor，这个方法的返回值一般传递给optimizer
 
 ### 实现细节
 >使用的python,pytorch函数，自己定义的函数等
@@ -660,6 +674,17 @@ getattr(object, name[,default])
 需要注意的是，如果是返回的对象的方法，返回的是方法的内存地址，如果需要运行这个方法，
 可以在后面添加一对括号。
 
+### 并行问题
+
+OpenNMT-py用来处理数据的对象，需要一个fields字段，这个字段通过defaultdict来实现，这个结构的好处是，当查询不存在的字段时，它默认不报错；但是有问题，这个结构无法用pickle打包，这就导致了在使用multiprocessing进行多线程时，带有这个结构的对象，都无法通过参数传递的方式，在多线程间分发。目前的OpenNMT-py版本无法处理这个问题。
+
+所以如果想要讲数据在多个线程间分发的话，先要将数据中fields字段的变量清空，再在各个线程内来构建fields字段。这也是目前OpenNMT对读取预处理数据的方式，因为保存了预处理数据的对象（包含fields字段），无法直接序列化保存到硬盘。
+```
+valid_data = torch.load(TRAIN_DATA + '.valid.pt')                                                
+fields = onmt.IO.load_fields(torch.load(TRAIN_DATA + '.vocab.pt'))                               
+valid_data.fields = fields # we need to clear this assignment relationg if we want to transfere among threads => valid_data.fields = []
+```
+
 ## py-torch
 
 ### python
@@ -667,6 +692,8 @@ getattr(object, name[,default])
 #### 语言特性
 
 - （内置）next函数：函数必须接收一个可迭代对象参数，每次调用的时候，返回可迭代对象的下一个元素。如果所有元素均已经返回过，则抛出StopIteration 异常。
+
+- GIL (global inptepreter lock): 首先GIL不是python特性，是CPython实现的一种设计, 它直接导致在python 2x中无法高效地实现多线程.
 
 ##### Variable变量
 - data保存数据，grad保存梯度，都是tensor，不会自动更新data需要手动通过grad来更新data
@@ -697,9 +724,128 @@ Variable containing:
 这个的判断应该不是通过某个计算过程中最后的地方有没有做过backward判断，而是整个图中是否已经有哪个带grad的参数被更新了，有就会报错（需要retain_graph）。
 所以计算流程中有一部分做要先做backward，先做的就要用retain_graph.对于给定的x，截止最后一次backward前，都要如此。
 
+### torch.arange()无法生成数字16777217（float的的表示方式问题），所以如果生成序列大于这个数，使用
+```
+out = torch.LongTensor()
+torch.arange(0, 200000, out=out)
+```
 
 #### __future__ 模块
 Python提供了__future__模块，把下一个新版本的特性导入到当前版本，于是我们就可以在当前版本中测试一些新版本的特性。
+
+### 并行api
+
+#### gather
+gather接口是将多个并行线程的结果进行归并。目前只支持传递cpu下的tensor结构（指线程间传递的tensor，每个线程计算的tensor没有限制）。
+```
+def prune_and_eval(rank, size, prune_threshold, results):
+357    #执行一些节点上计算，然后根据节点rank执行归并：
+361    tensor_list = []
+362    if rank == 0: # maskter node
+         #特别注意，gather_list是个list，但是根据要归并的结果大小，需要预先开好空间
+363      tensor_list = [torch.FloatTensor([0.0,0.1]) for i in range(size)]
+364      dist.gather(fitness, gather_list = tensor_list)
+         #上一句执行完后，归并即结束，这里不是异步的
+365      print(tensor_list)
+366    else:
+367      dist.gather(fitness, dst=0)
+```
+并行api能传递的参数，必须是能用particle进行打包的，有些非常复杂的对象很可能无法打包。如果这种对象是只读的（即不会对它做修改），那么可以考虑将之改为global的对象，这样可以绕过这个问题。
+
+### set_start_method
+pytorch利用了python3的并行函数库，具体原理未知，但是两者的api是一样的，在运行多线程先取药set_start_method("spawn"),这里要注意，set_start_method方法只能执行一次，而且如果get_start_method之类的方法执行过后，会设置默认的start_method，这样set_start_method就执行不了；因此有两个做法，一个是找准在哪个地方之前没有执行set_start_method，在那个地方之前用try catch的方式运行set_start_method（这样可以保持只执行一次，且不报错）；第二是在那个地方之前，通过if __method=="__main__"来控制执行一次set_start_method。
+
+注意一点from onmt.Utils import use_gpu，会在过程中执行get_start_method，因此要在这之前运行set_start_method.
+
+### GPU控制
+在shell中启动程序脚本时，可以通过CUDA_VISIBLE_DEVICES环境变量来控制本次可以访问的GPUs:
+```
+CUDA_VISIBLE_DEVICES=0,1,2 python xxx.py
+```
+
+也通过库torch.cuda控制GPU。
+
+程序本身上下文中有默认的cuda device，这个通过
+```
+torch.cuda.set_device()设置
+```
+
+可以通过torch.cuda.device()在不改变默认上下文的情况下改变device
+```
+x = torch.cuda.FloatTensor(1)
+# x.get_device() == 0
+
+with torch.cuda.device(1):
+    # allocates a tensor on GPU 1
+    a = torch.cuda.FloatTensor(1)
+```
+
+或者可以在生成tensor时指定它在的device：
+```
+d = torch.randn(2).cuda(2)
+# d.get_device() == 2
+```
+
+一定tensor在某个设备上开辟了，那么对于它的操作默认都在那个device上，这与当前上下文中的默认device是哪个无关。所以可以在其他上下文中，操作其他设备上的tensor。
+
+**只有copy_操作可以直接在不同device之间传输数据, 其他情况下需要专门的api**
+
+**只有cudatensor有get_device方法查看它所处的device序号，cputensor是没有的**
+
+#### tensor的new方法
+直接使用tensor的new方法，可以在原tensor所在的device上创建tensor，但是tensor的size和数值需要自定义：
+```
+y_cpu = x_cpu.new(8, 10, 10).fill_(0.3)
+y_gpu = x_gpu.new(x_gpu.size()).fill_(-5)
+```
+
+#### tensor的cuda(device=None, async=False)方法和nn.Module的cuda方法
+返回tensor在cuda上的一个拷贝。 如果当前tensor就在gpu上，且device id一致，那么返回当前tensor。这个操作不会改变原有tensor对象指向的device位置。
+async参数指定异步拷贝，这样需要同时拷贝多个对象式比较方便。
+
+**特别注意，torch.nn.Module的cuda()成员函数的表现和tensor的成员函数cuda()是不一样的！**
+nn.Module的cuda成员函数，在指定device number的情况下，会将参数都复制到相应的device上去，然后返回自己。所以这个操作会改变原有对象。
+
+
+### 在gpu间拷贝数据
+第一个方法如上所述，可以将一个gpu的数据定向拷贝到第二个上去；还有种方法是函数：
+```
+from torch.nn.parallel import replicate
+
+定义：
+def replicate(network, devices):
+```
+这个函数接受一个devcie的列表[source,target1,target2,...]，network必须在source上面，他会返回一个和device列表对应的network拷贝列表（返回列表第一项对应的是source device上的network）。
+这个函数的好处是，可以一次性拷贝多份，但是问题是，它依然无法再source上生成独立的拷贝。
+**想要在source上独立拷贝，应该只能手动建立新的tensor，然后拷贝过去**,如下：
+```
+new_copy = replicate(pretrained, [source_device_id, target_device_id])[1]
+if source_device_id == target_device_id:
+    for param_name, module_tensor in new_copy.named_parameters():
+         module_tensor.data = module_tensor.new(module_tensor.size()).copy_(module_tensor.data)
+return new_copy
+
+```
+特别注意，返回的结果列表里，第一个在source 上面的network，它不是输入的network，但是和输入network共享tensor存储。即第一个结果是浅拷贝，后面才是深拷贝。
+
+replicate函数借助的是函数：
+```
+torch.cuda.comm.broadcast_coalesced(tensors, devices, buffer_size=10485760)
+|
+|___torch.cuda.comm.broadcast(tensor, devices)
+    |
+    |__nccl.broadcast(tensors)
+```
+这个函数的功能是将一系列的tensor拷贝到对应的device 列表上去。而对于每个tensor的拷贝通过函数torch.cuda.comm.broadcast完成。但devices列表中都是不同的设备时，最终是调用nccl库实现的；而当有相同的device时，则是通过tensor的cuda(id,async=True)方法实现。
+通过阅读broadcast,可以很容易发现，源devcie上的tensor不会进行broadcast。
+
+### torch.distributed 和 torch.cuda.comm
+两者都可以实现多gpu并行，但是它们之间有什么区别？为什么要提供这两种方式？
+
+1. torch.cuda.comm只是将数据在多个GPU间传输，但是并不会开辟新的线程。torch.distributed则会开辟新的线程。
+2. torch.distributed应该是个专注于多线程编程的库。
+
+但是为什么要在torch.distributed中加入gpu数据传输的支持呢？不能直接用torch.cuda.comm完成这些吗？
 
 ### 常用API
 - torch.bmm: torch.bmm(batch1, batch2, out=None) → Tensor; Performs a batch matrix-matrix product of matrices stored in batch1 and batch2.
@@ -751,4 +897,8 @@ input is Variable, dim is the dimension along which log_softmax will be computed
 Returens a contiguous tensor containing the same data as this tensor. Contiguous tensor is contiguous in memeory in C order. If this tensor is contiguous, this function returns the origianl tensor.
 
 ### 实现细节
-- 对于长度不定的输入语句，如何实现batch模型的输入？
+- 对于长度不定的输入语句，如何实现batch模型的输入?
+
+一般做法和图像里一样，补零，但是需要额外维持一个index存储，记录哪些地方补了零，以便重新恢复。
+
+- SRU需要cuda库，但是它的正则规则是".cuda/lib.\*"，所以LD_LIBRARY_PATH里的cuda路径必须是xxxcuda/lib64这样的，可以根据需要自己改,在onmt/SRU.py中，64行的样子。
