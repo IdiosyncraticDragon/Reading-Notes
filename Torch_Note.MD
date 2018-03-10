@@ -848,6 +848,9 @@ torch.cuda.comm.broadcast_coalesced(tensors, devices, buffer_size=10485760)
 但是为什么要在torch.distributed中加入gpu数据传输的支持呢？不能直接用torch.cuda.comm完成这些吗？
 
 ### 常用API
+
+- torch.chunk(tensor, chunks, dim=0): Splits a tensor into a specific number of chunks. tensor: the tensor to split; chuncks:  number of chunks to return; dim: dimension along which to split the tensor
+
 - torch.bmm: torch.bmm(batch1, batch2, out=None) → Tensor; Performs a batch matrix-matrix product of matrices stored in batch1 and batch2.
 batch1 and batch2 must be 3D Tensors each containing the same number of matrices.
 If batch1 is a b x n x m Tensor, batch2 is a b x m x p Tensor, out will be a b x n x p Tensor.
@@ -869,6 +872,7 @@ bias_hh_l层数，hidden-hidden bias
 > encoder.gru.weight_ih_l0.size()
 torch.Size([1500, 500])
 ```
+<bold>具体的GRU实现代码，在pytorch.torch.nn.\_functions.rnn函数里面</bold>
 
 - GRU在bidirection为true情况下的输出隐藏状态维度是(2,batch_size, hidden_size)
 - 如果想变量能自动求导的话，在定义时需要将变量包裹进autograd.Variable里，并在能适用cuda的情况下，适用.cuda()数据
