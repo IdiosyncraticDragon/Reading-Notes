@@ -77,3 +77,42 @@ import tensorflow as tf
     if __name__ == '__main__':
       tf.test.main()
 ```
+
+## OpenNMT-tf 使用与Transformer模型的训练
+
+### sentencepiece与BPE
+> url: https://github.com/google/sentencepiece/tree/master/python
+
+要用sentencepiece来处理数据，目的是使用BPE方法，通过unsupervise的方法训练一个模型，来对原始数据进行编码解码。
+
+训练的语句为：
+
+`
+spm_train --input=data/train.txt --model_prefix=wmtende --vocab_size=32000 --character_coverage=1 --model_type=bpe
+`
+
+上面选项中：
+
+--input：是原始输入数据的路径，每行一条语句，源语言和目标语言都放入一个文件或者用逗号隔开的两个文件，不需要做预处理。
+
+--model_type: 训练什么样的编码模型，有unigram(默认),bpe,char和word。
+
+--input_sentence_size:指定用来训练的语句数的上限，默认是1千万句。
+
+#### 问题1，修改容器系统的编码
+> 在docker容器中，系统ubuntu 16.04
+
+在处理数据时，编码问题可能会导致结果不对。
+在ubuntu下通过如下方法设置支持中文的系统编码：
+
+`
+apt-get -y install language-pack-zh-hans
+export LANG="zh_CN.UTF-8"
+export LANGUAGE="zh_CN:zh"
+export LC_ALL="zh_CN.UTF-8"
+`
+
+#### 问题 IWSLT数据的结构
+以（英文，中文）对为例，英文翻译成中文和中文翻译成英文是两个数据集。每个数据集中tran.tags.x-y.x/y这两个文件是训练的数据对，其他是test和validation，这些数据里面的内容都是一样的。只有一个train.x/y这个数据的内容是不一样的，它似乎只是用来提供目标种的形态信息。
+
+train.tags.x-y.x/y文件中是以xml的格式存储信息，
