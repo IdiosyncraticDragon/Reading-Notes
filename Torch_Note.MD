@@ -523,7 +523,7 @@ pytorch这种还没完全成熟的项目，好多坑啊。。。
 
 ### 论文training rnn as fast as CNNs，Lei et al.,2017复现 (opennmt-py)
 ### 数据集WMT14 en-to-de
-数据集从 https://nlp.stanford.edu/projects/nmt/ 下载。
+数据集从 https://nlp.stanford.edu/projects/nmt/ 下载。**特别注意** 这个数据不是通用的数据，整整两周，我用这个数据没有浮现sru、luong和transfomer，因为这个数据内部是有作者专门为自己的程序而插入的mark的。在数据的下载链接那并没说这个事。
 
 ### 数据预处理
 - 依然有内存开销极大的情况. 首先这个在building training阶段出现这个错误的时候，通过将onmt/IO.py中196行的filter_pred设为None可以解决这个而问题，filter_pred是用在torchtext.data.Dataset这个函数中的，不在opennmt项目中，它的用途是在提供程序选项opt的情况，根据opt中的语句最大长度，过滤掉数据中长度长于最大长度的语句。目前可以认为是这个过滤过程出了问题，变成了一个大耗内存的操作，但是这个问题并不是比如出现的，根据这个issuse（https://github.com/OpenNMT/OpenNMT-py/pull/291）的看法，是因为默认设置的语句最大长度为50，而训练数据里面全部都比50大，于是会出现这个问题（既出现bug，把内存耗完），这个issuse的做法是在preprocess是通过选项设置将语句的最大长度设置为1000，但即使这样内存开销还是很大，可见IO代码中还是有问题，但是不是会出现一直增长导致内存耗尽的问题。目前正在测试这个做法是否有效：靠谱，能解决这问题！
@@ -568,6 +568,79 @@ CUDA_VISIBLE_DEVICES=0,1 ./cuda_executable
 
 ### API和模块
 
+#### onmt/Translator.py包含已训练好模型的调用
+但是OpenNMT-py的调用结构封装的很严实，并不是很好进行修改。
+
+- 层次查找：下面是一个模型load后的树状结构，一般叶子节点是可以访问到存储参数的。
+```
+NMTModel (
+  (encoder): RNNEncoder (
+    (embeddings): Embeddings (
+      (make_embedding): Sequential (
+        (emb_luts): Elementwise (
+          (0): Embedding(50002, 1000, padding_idx=1)
+        )
+      )
+    )
+    (rnn): LSTM(1000, 1000, num_layers=4, dropout=0.2)
+  )
+  (decoder): InputFeedRNNDecoder (
+    (embeddings): Embeddings (
+      (make_embedding): Sequential (
+        (emb_luts): Elementwise (
+          (0): Embedding(50004, 1000, padding_idx=1)
+        )
+      )
+    )
+    (dropout): Dropout (p = 0.2)
+    (rnn): StackedLSTM (
+      (dropout): Dropout (p = 0.2)
+      (layers): ModuleList (
+        (0): LSTMCell(2000, 1000)
+        (1): LSTMCell(1000, 1000)
+        (2): LSTMCell(1000, 1000)
+        (3): LSTMCell(1000, 1000)
+      )
+    )
+    (attn): GlobalAttention (
+      (linear_in): Linear (1000 -> 1000)
+      (linear_out): Linear (2000 -> 1000)
+      (sm): Softmax ()
+      (tanh): Tanh ()
+    )
+  )
+  (generator): Sequential (
+    (0): Linear (1000 -> 50004)
+    (1): LogSoftmax ()
+  )
+)
+```
+这实际上pytorch的nn.Module的子类。
+这个结构的展示会在语句
+```
+onmt.ModelConstructor.make_base_model
+```
+执行后打印到控制台。
+
+#### 常用的结构单元
+- Embedding层：pytorch的Embedding在这里被层层封装
+self.model.encoder.embeddings.make_embedding[0][0].weight才能访问到保存的embendding。
+
+- LSTM层：
+  - Encoder节点的LSTM是pytorch自带的LSTM所以可以用 **weight_ih_l层数** 这样的方法来访问参数。
+  - Decoder节点的LSTM可能是OpenNMT-py自己构建的StackedRNN，但是它的构成单元还是pytorch的RNNCell，所以可以追溯到构建单元的LSTMCell，然后用 **weight_ih**/**wegiht_hh**/**bias_ih**/**bias_hh** 这些属性变量来访问参数。
+
+- Generator:
+  这是指从网络output部分到预测结果部分的衔接结构
+
+- 如何遍历一个nn.Module中的所有参数。
+利用nn.Module中返回可迭代对象的方法：modules(),named_modules(), named_children(),named_parameters(),parameters(). 下面说明具体异同。
+  - modules():只把所有的module返回，不返回对应的名称，同时复制产生的module只返回一次（即其实指向同一个对象）。
+  - named_modules():顾名思义，和上面方法对比，区别在于会返回module的名字。
+  - named_children(): 这个方法只返回model的一级children model，一级的一次是广度搜索搜一层。
+  - named_parameters(): 这个返回的是带参数的module的名字（带有层级的名字，即'xx.xxx.xxx')和参数Tensor构成。在这里对参数tensor的修改直接对应到原始tensor的内容。
+  - parameters(): 只返回参数tensor，这个方法的返回值一般传递给optimizer
+
 ### 实现细节
 >使用的python,pytorch函数，自己定义的函数等
 
@@ -601,6 +674,17 @@ getattr(object, name[,default])
 需要注意的是，如果是返回的对象的方法，返回的是方法的内存地址，如果需要运行这个方法，
 可以在后面添加一对括号。
 
+### 并行问题
+
+OpenNMT-py用来处理数据的对象，需要一个fields字段，这个字段通过defaultdict来实现，这个结构的好处是，当查询不存在的字段时，它默认不报错；但是有问题，这个结构无法用pickle打包，这就导致了在使用multiprocessing进行多线程时，带有这个结构的对象，都无法通过参数传递的方式，在多线程间分发。目前的OpenNMT-py版本无法处理这个问题。
+
+所以如果想要讲数据在多个线程间分发的话，先要将数据中fields字段的变量清空，再在各个线程内来构建fields字段。这也是目前OpenNMT对读取预处理数据的方式，因为保存了预处理数据的对象（包含fields字段），无法直接序列化保存到硬盘。
+```
+valid_data = torch.load(TRAIN_DATA + '.valid.pt')                                                
+fields = onmt.IO.load_fields(torch.load(TRAIN_DATA + '.vocab.pt'))                               
+valid_data.fields = fields # we need to clear this assignment relationg if we want to transfere among threads => valid_data.fields = []
+```
+
 ## py-torch
 
 ### python
@@ -609,10 +693,164 @@ getattr(object, name[,default])
 
 - （内置）next函数：函数必须接收一个可迭代对象参数，每次调用的时候，返回可迭代对象的下一个元素。如果所有元素均已经返回过，则抛出StopIteration 异常。
 
+- GIL (global inptepreter lock): 首先GIL不是python特性，是CPython实现的一种设计, 它直接导致在python 2x中无法高效地实现多线程.
+
+##### Variable变量
+- data保存数据，grad保存梯度，都是tensor，不会自动更新data需要手动通过grad来更新data
+```
+w1=Variable(torch.Tensor([1.0, 2.0, 3.0]), requires_grad=True)
+w1.data
+w1.grad
+```
+- 使用backward()函数计算梯度，注意梯度是累加到每个相关Variable的grad张量中的,不对grad清零的话它会一直累加下去
+```
+x=Variable(torch.Tensor([1,1,1]))
+w1=Variable(torch.Tensor([1.0, 2.0, 3.0]), requires_grad=True)
+d1=w1.dot(x)
+d2=w1.dot(torch.cat((d,d,d)))
+d2.backward()
+
+w1.grad
+Out[44]:
+Variable containing:
+ 12
+ 12
+ 12
+[torch.FloatTensor of size 3]
+```
+注意，这里计算的时候先计算d1->d2时w1的梯度，为6，存到grad中；再极端delta d1到w1的梯度，分别诶(1+2+3)=6.加起来是12.
+
+- 如果要重复计算一个计算流图的梯度的话（就是同一个输入做两次backward），需要在第一次backward是设置retain_graph=True
+这个的判断应该不是通过某个计算过程中最后的地方有没有做过backward判断，而是整个图中是否已经有哪个带grad的参数被更新了，有就会报错（需要retain_graph）。
+所以计算流程中有一部分做要先做backward，先做的就要用retain_graph.对于给定的x，截止最后一次backward前，都要如此。
+
+### torch.arange()无法生成数字16777217（float的的表示方式问题），所以如果生成序列大于这个数，使用
+```
+out = torch.LongTensor()
+torch.arange(0, 200000, out=out)
+```
+
 #### __future__ 模块
 Python提供了__future__模块，把下一个新版本的特性导入到当前版本，于是我们就可以在当前版本中测试一些新版本的特性。
 
+### 并行api
+
+#### gather
+gather接口是将多个并行线程的结果进行归并。目前只支持传递cpu下的tensor结构（指线程间传递的tensor，每个线程计算的tensor没有限制）。
+```
+def prune_and_eval(rank, size, prune_threshold, results):
+357    #执行一些节点上计算，然后根据节点rank执行归并：
+361    tensor_list = []
+362    if rank == 0: # maskter node
+         #特别注意，gather_list是个list，但是根据要归并的结果大小，需要预先开好空间
+363      tensor_list = [torch.FloatTensor([0.0,0.1]) for i in range(size)]
+364      dist.gather(fitness, gather_list = tensor_list)
+         #上一句执行完后，归并即结束，这里不是异步的
+365      print(tensor_list)
+366    else:
+367      dist.gather(fitness, dst=0)
+```
+并行api能传递的参数，必须是能用particle进行打包的，有些非常复杂的对象很可能无法打包。如果这种对象是只读的（即不会对它做修改），那么可以考虑将之改为global的对象，这样可以绕过这个问题。
+
+### set_start_method
+pytorch利用了python3的并行函数库，具体原理未知，但是两者的api是一样的，在运行多线程先取药set_start_method("spawn"),这里要注意，set_start_method方法只能执行一次，而且如果get_start_method之类的方法执行过后，会设置默认的start_method，这样set_start_method就执行不了；因此有两个做法，一个是找准在哪个地方之前没有执行set_start_method，在那个地方之前用try catch的方式运行set_start_method（这样可以保持只执行一次，且不报错）；第二是在那个地方之前，通过if __method=="__main__"来控制执行一次set_start_method。
+
+注意一点from onmt.Utils import use_gpu，会在过程中执行get_start_method，因此要在这之前运行set_start_method.
+
+### GPU控制
+在shell中启动程序脚本时，可以通过CUDA_VISIBLE_DEVICES环境变量来控制本次可以访问的GPUs:
+```
+CUDA_VISIBLE_DEVICES=0,1,2 python xxx.py
+```
+
+也通过库torch.cuda控制GPU。
+
+程序本身上下文中有默认的cuda device，这个通过
+```
+torch.cuda.set_device()设置
+```
+
+可以通过torch.cuda.device()在不改变默认上下文的情况下改变device
+```
+x = torch.cuda.FloatTensor(1)
+# x.get_device() == 0
+
+with torch.cuda.device(1):
+    # allocates a tensor on GPU 1
+    a = torch.cuda.FloatTensor(1)
+```
+
+或者可以在生成tensor时指定它在的device：
+```
+d = torch.randn(2).cuda(2)
+# d.get_device() == 2
+```
+
+一定tensor在某个设备上开辟了，那么对于它的操作默认都在那个device上，这与当前上下文中的默认device是哪个无关。所以可以在其他上下文中，操作其他设备上的tensor。
+
+**只有copy_操作可以直接在不同device之间传输数据, 其他情况下需要专门的api**
+
+**只有cudatensor有get_device方法查看它所处的device序号，cputensor是没有的**
+
+#### tensor的new方法
+直接使用tensor的new方法，可以在原tensor所在的device上创建tensor，但是tensor的size和数值需要自定义：
+```
+y_cpu = x_cpu.new(8, 10, 10).fill_(0.3)
+y_gpu = x_gpu.new(x_gpu.size()).fill_(-5)
+```
+
+#### tensor的cuda(device=None, async=False)方法和nn.Module的cuda方法
+返回tensor在cuda上的一个拷贝。 如果当前tensor就在gpu上，且device id一致，那么返回当前tensor。这个操作不会改变原有tensor对象指向的device位置。
+async参数指定异步拷贝，这样需要同时拷贝多个对象式比较方便。
+
+**特别注意，torch.nn.Module的cuda()成员函数的表现和tensor的成员函数cuda()是不一样的！**
+nn.Module的cuda成员函数，在指定device number的情况下，会将参数都复制到相应的device上去，然后返回自己。所以这个操作会改变原有对象。
+
+
+### 在gpu间拷贝数据
+第一个方法如上所述，可以将一个gpu的数据定向拷贝到第二个上去；还有种方法是函数：
+```
+from torch.nn.parallel import replicate
+
+定义：
+def replicate(network, devices):
+```
+这个函数接受一个devcie的列表[source,target1,target2,...]，network必须在source上面，他会返回一个和device列表对应的network拷贝列表（返回列表第一项对应的是source device上的network）。
+这个函数的好处是，可以一次性拷贝多份，但是问题是，它依然无法再source上生成独立的拷贝。
+**想要在source上独立拷贝，应该只能手动建立新的tensor，然后拷贝过去**,如下：
+```
+new_copy = replicate(pretrained, [source_device_id, target_device_id])[1]
+if source_device_id == target_device_id:
+    for param_name, module_tensor in new_copy.named_parameters():
+         module_tensor.data = module_tensor.new(module_tensor.size()).copy_(module_tensor.data)
+return new_copy
+
+```
+特别注意，返回的结果列表里，第一个在source 上面的network，它不是输入的network，但是和输入network共享tensor存储。即第一个结果是浅拷贝，后面才是深拷贝。
+
+replicate函数借助的是函数：
+```
+torch.cuda.comm.broadcast_coalesced(tensors, devices, buffer_size=10485760)
+|
+|___torch.cuda.comm.broadcast(tensor, devices)
+    |
+    |__nccl.broadcast(tensors)
+```
+这个函数的功能是将一系列的tensor拷贝到对应的device 列表上去。而对于每个tensor的拷贝通过函数torch.cuda.comm.broadcast完成。但devices列表中都是不同的设备时，最终是调用nccl库实现的；而当有相同的device时，则是通过tensor的cuda(id,async=True)方法实现。
+通过阅读broadcast,可以很容易发现，源devcie上的tensor不会进行broadcast。
+
+### torch.distributed 和 torch.cuda.comm
+两者都可以实现多gpu并行，但是它们之间有什么区别？为什么要提供这两种方式？
+
+1. torch.cuda.comm只是将数据在多个GPU间传输，但是并不会开辟新的线程。torch.distributed则会开辟新的线程。
+2. torch.distributed应该是个专注于多线程编程的库。
+
+但是为什么要在torch.distributed中加入gpu数据传输的支持呢？不能直接用torch.cuda.comm完成这些吗？
+
 ### 常用API
+
+- torch.chunk(tensor, chunks, dim=0): Splits a tensor into a specific number of chunks. tensor: the tensor to split; chuncks:  number of chunks to return; dim: dimension along which to split the tensor
+
 - torch.bmm: torch.bmm(batch1, batch2, out=None) → Tensor; Performs a batch matrix-matrix product of matrices stored in batch1 and batch2.
 batch1 and batch2 must be 3D Tensors each containing the same number of matrices.
 If batch1 is a b x n x m Tensor, batch2 is a b x m x p Tensor, out will be a b x n x p Tensor.
@@ -625,12 +863,46 @@ bias – If False, then the layer does not use bias weights b_ih and b_hh. Defau
 batch_first – If True, then the input and output tensors are provided as (batch, seq, feature)
 dropout – If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
 bidirectional – If True, becomes a bidirectional RNN. Default: False
+获取GRU保存权值的方法是通过下面几个属性变量：
+weight_ih_l层数，input-hidden
+weight_hh_k层数，hidden-hidden
+bias_in_l层数，input-hidde bias
+bias_hh_l层数，hidden-hidden bias
+```
+> encoder.gru.weight_ih_l0.size()
+torch.Size([1500, 500])
+```
+<bold>具体的GRU实现代码，在pytorch.torch.nn.\_functions.rnn函数里面</bold>
+
 - GRU在bidirection为true情况下的输出隐藏状态维度是(2,batch_size, hidden_size)
 - 如果想变量能自动求导的话，在定义时需要将变量包裹进autograd.Variable里，并在能适用cuda的情况下，适用.cuda()数据
 - 特别注意GRU单元的维度结构为：输入:input, hidden_0, input=>(seq_len, batch, input_size),  hidden=>(num_layers * num_directions, batch, hidden_size);输出:output, hidden_n, output=>(seq_len, batch, hidden_size * num_directions),hidden_n=>(num_layers * num_directions, batch, hidden_size)
 
 - view function: reshape the tensor. 可以使用-1参数，不过只有一维可以，-1的意思是这一维度的数字不知道，有程序自己推定。
 
+- torch.squeeze(tensor [, dim]):将tensor中1的的维度去掉，如nx1xm,经过squeeze后变成nxm;如果指定了dim，则事当dim维为1时去掉那一维，不然维持不变。
+
+- torch.nn.utils.rnn.pack_padded_sequence(inut, lengths, batch_first=False) => PackedSequence object
+Packs a Variable containing padded sequences of variable length. Input can be of size  __TXBX*__ where T is the length of the longest sequence (equal to lengths[0]), B is the batch size, and * is any number of dimensions (including 0). If __batch_first__ is True __BxTx*__ inputs are expected. The sequences should be sorted by length in a decreasing order, i.e. input[:,0] should be the longest sequence, and input[:, B-1] the shortest one.
+
+- torch.nn.utils.rnn.pad_packed_sequence(sequence, batch_first=False, padding_value=0.0) => (Variable containing the padded sequence, [lengths of each sequence in the batch])
+Pads a packe batch of variable length sequences. It is an inverse operation to pack_padded_sequence.
+The reurened Variable's data will be of size __TXBX*__. If __batch_first__ is True, the data will be transposed into __BXTX*__ format.
+
+- torch.nn.Embedding
+A simple lookup table taht stores embeddings of a fixed dictionary and size.
+This module is often used to store word embeddings and retrieve them using indices. The input to the module is a list of indices, and the output is the corresponding word embeddings.
+想要修改这个对象的权值，需要通过embedding.weight.data来进行修改。
+
+- torch.nn.functional.log_softmax(input, dim=None)
+input is Variable, dim is the dimension along which log_softmax will be computed.
+
+- Tensor.contiguous() -> Tensor
+Returens a contiguous tensor containing the same data as this tensor. Contiguous tensor is contiguous in memeory in C order. If this tensor is contiguous, this function returns the origianl tensor.
 
 ### 实现细节
-- 对于长度不定的输入语句，如何实现batch模型的输入？
+- 对于长度不定的输入语句，如何实现batch模型的输入?
+
+一般做法和图像里一样，补零，但是需要额外维持一个index存储，记录哪些地方补了零，以便重新恢复。
+
+- SRU需要cuda库，但是它的正则规则是".cuda/lib.\*"，所以LD_LIBRARY_PATH里的cuda路径必须是xxxcuda/lib64这样的，可以根据需要自己改,在onmt/SRU.py中，64行的样子。
