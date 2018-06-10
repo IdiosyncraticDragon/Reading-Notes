@@ -116,3 +116,58 @@ export LC_ALL="zh_CN.UTF-8"
 以（英文，中文）对为例，英文翻译成中文和中文翻译成英文是两个数据集。每个数据集中tran.tags.x-y.x/y这两个文件是训练的数据对，其他是test和validation，这些数据里面的内容都是一样的。只有一个train.x/y这个数据的内容是不一样的，它似乎只是用来提供目标种的形态信息。
 
 train.tags.x-y.x/y文件中是以xml的格式存储信息，
+
+### （for word embedding) 如何提取Transformer的word embedding向量并用其他向量替换？
+首先，OpenNMT-tf不带这项功能，所以我们需要对代码进行自定义修改。
+
+`
+opennmt/inputters/text_inputter.py
+`
+
+中的第364行定义了word embedding向量。
+通过，`embeddings = tf.get_variable( "w_embs", shape=shape, dtype=self.dtype, initializer=initializer, trainable=self.trainable)`生成的变量。获得word embedding变量的方法为`outputs = embedding_lookup(embeddings, inputs)`，这个方法实际调用`tf.nn.embedding_lookup`来完成embedding向量查找。
+
+`
+tf.get_variable
+Gets an existing variable with these parameters or create a new one.
+`
+
+#### python函数修饰符@
+类似于扩展方法和闭包
+`
+@method
+def kkk():
+`
+这里method接受kkk函数作为输入，实际调用method(kkk),可以看成是对kkk做包装。
+当method是类名是，相当于将kkk作为类的扩展方法。
+
+#### 为什么要对embedding_lookup做包装？
+>https://github.com/OpenNMT/OpenNMT-tf/blob/master/opennmt/layers/common.py
+
+让不支持sparse grediant的optimizer能用上。
+代码中使用的
+`tensorflow.python.framework.function.Defun`是一个tf定义的函数修饰器，作用是“Use this decorator to make a Python function usable directly as a TensorFlow function.”。更深入的就不用了解了。
+
+#### 为什么tf.get_variable这么一个通用方法可以生成word embedding这种特殊向量？
+>https://www.tensorflow.org/programmers_guide/embedding
+
+确切说，生成embedding变量的是embedding_lookup函数。那既然已经用tf.variables生成tensor了，那为什么还要用embedding_lookup呢？  参见[API doc](https://www.tensorflow.org/api_docs/python/tf/nn/embedding_lookup)中的内容，可知，这是为了从tensor中按照给定的整数索引对应embedding vector 而做的封装。这样做比直接从embedding matrix中抽取向量的好处在暂时未知，猜测是虽然逻辑上一样，但是这样封装可以提高效率（python,c++,gpu交互之类）。
+
+#### 如何从tensorflow保存的模型中提取word embedding向量？
+直接在session.run的时候，evaluate那个word embedding 的矩阵。
+直接参考tensorflow提供的[inspect_checkpoint.py](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/inspect_checkpoint.py)，从保存好的模型中提取参数。
+
+#### 如何通过python脚本的方式运行OpenNMT-tf的WMT模型性？
+1. onmt-main这个可执行文件是个python代码，直接封装的是 opennmtf/bin/main.py.
+2. onmt-main infer 会执行opennmt.runner里面Runner类的一个对象的成员函数infer()
+
+#### 将compositional code learning的方法组合到OpenNMT-tf的Transformer实现之中，需要做那些事情？
+1. Transformer中embedding向量的提取，并转成官方compositional code learning项目能接受的模式；测试32x16和64x16两种方式
+2. 修改官方代码导出结果的方式（需要细化）
+3. 重写embedding_lookup，实现compositional encoding，不训练
+4. 重训练模型，查看32x16和64x16能达到的效果如何
+
+#### 如果将简化好的embedding向量放入Transformer？
+1. 如何将保存模型中的word embedding向量值替换？
+2. 如何设计新的embedding lookup
+3. 如何将原始模型的其他值原样复制到新模型
