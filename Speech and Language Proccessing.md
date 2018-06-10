@@ -25,4 +25,7 @@ __Sentence segmentation__: Break text into individual sentences.
 
 __Parsing__: taking an input and producing some sort of Linguistic structure for it.  
 __Productive suffix__: it applies to very verb.  
-__Morphology__: the study of the way words are built up from smaller meaning-bearing units, *morphems*（defined as the minimun meaning-bearing unit in a language, more specifically, like *stems* or *affixes*）.
+__Morphology__: the study of the way words are built up from smaller meaning-bearing units, *morphems*（defined as the minimun meaning-bearing unit in a language, more specifically, like *stems* or *affixes*）.  
+__morphological parser needs__: lexicon which is the list of stems and affixes, together with the basic information about them.  
+__morphotactics__: the model of morpheme ordering that explains which classes of morphemes can follow other classes of morphemes inside a word.  
+__orthographic rules__: spelling rules are used to model the changes that occur in a word, usually when two morphemes combine  
