@@ -43,6 +43,15 @@ depop=tf.assign(a,a+1)
 c=a+b
 ```
 
+### 模型保存与载入
+>http://cv-tricks.com/tensorflow-tutorial/save-restore-tensorflow-models-quick-complete-tutorial/
+
+tensorflow保存文件的结构：  
+__.meta文件__：保存了整个计算流图的结构信息。  
+__.index + .data-xxx-of-xxxx__：0.11版本之前只有一个文件，之后是分成两个文件。二进制格式，保存了all the values of the weights, biases, gradients and all the other variables saved.  
+__checkpoint__：simply keeps a record of latest checkpoint files saved.
+
+
 
 ### Debug
 - graph 和 session的模式使得调试不是很方便，所以tf有专门的工具进行代码调试：
@@ -52,6 +61,9 @@ from tensorflow.python import debug as tf_debug
 sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 ```
 这样在运行时，就是在senssion开始前进入debug界面，并可以通过命令检测每次senssion中的一些信息。
+
+### Lib usage
+- tf.train.latest_checkpoint( checkpoint_dir, latest_filename=None): return the full path to the latest checkpoint or None if no checkpoint was found.
 
 ## 调用结构解析
 
@@ -169,5 +181,17 @@ def kkk():
 
 #### 如果将简化好的embedding向量放入Transformer？
 1. 如何将保存模型中的word embedding向量值替换？
-2. 如何设计新的embedding lookup
+2. 如何设计新的embedding lookup, input数据是什么格式，如何读取进来的。
 3. 如何将原始模型的其他值原样复制到新模型
+第一个问题需要知道的是，Transformer的最高层结构定义在哪里，即包含各个部分构成的地方，怎么构建模型，怎么载入模型的？
+
+  在opennmt.config.load_model(config["model_dir"], model_name='Transformer')后，会[返回](https://github.com/IdiosyncraticDragon/OpenNMT-tf/blob/master/opennmt/models/catalog.py#L138)一个全新的Transformer:opennmt.models.model.Model模型,并在config["model_dir"]的位置生成一个"model_description.pkl"描述文件。  
+  Runner的初始化，主要是讲配置文件里面的参数信息拷贝到Runner对象中去。  
+  在Runner中，需要初始化[tf.estimator.Estimator](https://www.tensorflow.org/api_docs/python/tf/estimator/Estimator)，并且infer的时候使用这个对象做inference。  
+  Estimator需要一个mode_fn参数，openNMT里面所有的这个参数都是定义在opennmt.models.Model里面。
+  具体构建计算流图的过程是这样的（自定向下）：首先在[Model](https://github.com/IdiosyncraticDragon/OpenNMT-tf/blob/master/opennmt/models/model.py)大类中定义抽象函数[_build](https://github.com/IdiosyncraticDragon/OpenNMT-tf/blob/master/opennmt/models/model.py#L144)，这个函数是在各个层面上对模型进行构建的函数。要注意，构建embedding的功能对象是最为[初始化参数](https://github.com/IdiosyncraticDragon/OpenNMT-tf/blob/master/opennmt/models/model.py#L21)传入Model对象的，在_build中构建流图的时候，embedding部分就是通过embedding功能对象 产生的。在Model大类中的model_fn函数里面，通过[_model_fn](https://github.com/IdiosyncraticDragon/OpenNMT-tf/blob/master/opennmt/models/model.py#L78)函数构建整个模型的图，其中会调用具体的对象的_build函数做构图。目前支持的模型，其_build函数实现都在[SequenceToSequence](https://github.com/IdiosyncraticDragon/OpenNMT-tf/blob/master/opennmt/models/sequence_to_sequence.py#L106)类中定义的。将checkpoint中的参数填入模型的过程，应该是在Estimator对象中[完成的](https://github.com/IdiosyncraticDragon/OpenNMT-tf/blob/master/opennmt/runner.py#L185)，也就是说，这是tf完成的事情。
+
+  目前来看，如果要将compositional encoding嵌入进去，就必须新建个模型，然后分别将composisonal encoding的内容和其他部分的内容拷进去。首先构建模型，在不加入太多内容的情况下，需要将compostional encoding得到的tensor打散成M个小tensor，然后利用他们的code来访问各个小tensor内的eoncoding，最后要加入一个求和的过程，即可。  
+  但是改结构是很难的，既然encoding部分不需要重训练，那么我们直接将compositional encoding转成完整的encoding然后直接赋值给模型，进行测试，这样就简单很多了。
+
+  
