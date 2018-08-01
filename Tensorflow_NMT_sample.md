@@ -194,4 +194,15 @@ def kkk():
   目前来看，如果要将compositional encoding嵌入进去，就必须新建个模型，然后分别将composisonal encoding的内容和其他部分的内容拷进去。首先构建模型，在不加入太多内容的情况下，需要将compostional encoding得到的tensor打散成M个小tensor，然后利用他们的code来访问各个小tensor内的eoncoding，最后要加入一个求和的过程，即可。  
   但是改结构是很难的，既然encoding部分不需要重训练，那么我们直接将compositional encoding转成完整的encoding然后直接赋值给模型，进行测试，这样就简单很多了。
 
-  
+### 如何使用[contrib.model_pruning](https://github.com/tensorflow/tensorflow/tree/r1.8/tensorflow/contrib/model_pruning)
+
+#### 项目如何作用于已经训练好的模型
+有两种方式，一是定义一个新的图结构，在新结构的每个tensor外面包裹一层mask layer；二是定义一个新的图结构，图结构与原始图一一映射，但是每个层换成新设计的层（自带mask）。
+**即，是新定义一个图结构，然后将已训练好的参数导入到这个图结构中**
+
+#### 图结构的mask层是怎么实现的？入股要改成L-OBS如何做？
+
+#### 已训练好的模型参数如何导入图结构中？
+contrib.model_pruning是在session的初始化时，指定checkpoint的位置来完成这件事情的。
+
+#### 怎么将Transformer展开？怎么在Transfoer中加入mask？
