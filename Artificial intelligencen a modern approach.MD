@@ -3,9 +3,28 @@
 > version: 2nd edition, 2003
 > newest version: 3nd edition
 
+## Chapter 2The structure of agents
+
+### properties of task environments
+
+- ```sequence
+  environment -> static/dynamic: whether change?
+  environment -> fully/partially obervable: accessability to environment states
+  environment -> discrete/contineous: state of enviroment, the way time is handled, the percepts and actions of the agenet
+  environment -> deterministic/stochastic: the relationshipe between states
+  
+  ```
+
+- 
+
+
+
+
+
 ## Informed Search and Exploration
 
 ### concepts
+
 - <strong>city block distance</strong> or <strong>Manhattan distance</strong>: Consider the 2-d checkboard, the <font color="red">Manhattan distance</font> means the sum of the horizontal and vertical distances.
 - <strong>Informed Search</strong>: one that uses problem-specific knowledge beyond the definition of the prblem itself.
 - <strong>Best First Search</strong>: choose the node that appears to be best according to the evaluation function.
