@@ -1,6 +1,8 @@
 # Note of Torch
 > author: Guiying Li
 
+[TOC]
+
 ## Basic
 
 ### Loop
@@ -560,7 +562,7 @@ CUDA_VISIBLE_DEVICES=0,1 ./cuda_executable
    ```
      luarocks install tds
    ```
-  这样运行快速入门里的例子就没问题了。
+    这样运行快速入门里的例子就没问题了。
 3. 注意，-gpuid 这个参数是从1开始的，如果设成0的话，会自动切换成多核cpu运行。
 
 ## OpenNMT-py
@@ -645,7 +647,7 @@ self.model.encoder.embeddings.make_embedding[0][0].weight才能访问到保存�
 >使用的python,pytorch函数，自己定义的函数等
 
 - itertools.count函数：
-count(),	参数：start, [step]；	输出：start, start+step, start+2*step, …
+	count(),	参数：start, [step]；	输出：start, start+step, start+2*step, …
 示例：count(10) --> 10 11 12 13 14 ...
 实现中使用了yield关键字，每次调用才返回一个结果，不是一次产生一个列表。
 
