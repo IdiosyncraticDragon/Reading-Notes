@@ -112,6 +112,14 @@ jumper ansible_ssh_port=5555 ansible_ssh_host=192.168.1.50
 
 ## 使用
 
+激活Python环境
+
+```bash
+conda activate ansible
+```
+
+
+
 ### 快速使用
 
 查看全体连接
