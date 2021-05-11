@@ -42,8 +42,6 @@ source ./hacking/env-setup
    sudo pip install ansible
    ```
 
-
-
 ## 配置
 
 需要配置的内容包括，ssh免密、inventory和ansible.cfg配置。
@@ -106,11 +104,72 @@ jumper ansible_ssh_port=5555 ansible_ssh_host=192.168.1.50
 
 ```
 
+## 使用docker创建被控制机器节点
+
+
+
+```bash
+ docker pull chusiang/ansible-managed-node:ubuntu-14.04
+ docker run --name ansible-cli  -d -P chusiang/ansible-managed-node:ubuntu-14.04
+ docker exec -ti ansible-cli bash
+ 
+```
+
+上面使用的镜像中，用户信息为
+
+```
+#### 使用者帐户 #####################
+#
+# |           | username | password |
+# |-----------|----------|----------|
+# | root user | root     | root     |
+# | sudo user | docker   | docker   |
+```
+
+
+
+配置`/etc/ansible/ansible.cfg`
+
+```cfg
+[defaults]
+
+# some basic default values...
+hostfile = hosts
+remote_user = docker
+host_key_checking = False
+```
+
+配置`/etc/ansible/hosts `
+
+```
+ansible-cli  ansible_ssh_host=127.0.0.1  ansible_ssh_port=32805 ansible_ssh_pass=docker
+
+[local]
+ansible-cli
+```
+
+然后安装依赖
+
+```bash
+ sudo apt-get install sshpass
+```
+
+验证是否可以使用：
+
+```bash
+ansible all -m command -a 'echo Hello World on Docker.'
+```
+
+成功输出：
+
+```
+ansible-cli | CHANGED | rc=0 >>
+Hello World on Docker.
+```
 
 
 
 
-## 使用
 
 激活Python环境
 
